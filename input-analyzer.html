@@ -37,15 +37,67 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .go-btn:not(:disabled):hover{opacity:.88}
 #pg-dash{display:none;padding:22px 28px 80px}
 .dash-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:20px}
-.dash-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);line-height:2}
+.dash-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);line-height:2;flex-shrink:0}
 .dash-meta b{color:var(--mid);font-weight:500}
-.dash-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.comp-tabs{display:flex;gap:7px;flex-wrap:wrap}
-.ctab{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border-radius:4px;border:1px solid var(--bdr2);background:transparent;color:var(--dim);cursor:pointer;transition:.12s}
-.ctab.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.ctab:hover:not(.on){border-color:var(--accent);color:var(--text)}
-.reload-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--bdr2);border-radius:4px;color:var(--dim);cursor:pointer}
-.reload-btn:hover{border-color:var(--accent);color:var(--text)}
+.dash-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
+.comp-sel-panel{
+  flex:1;min-width:0;max-width:min(100%,860px);
+  position:relative;color-scheme:dark;
+  padding:11px 14px 12px 16px;
+  border-radius:10px;
+  border:1px solid var(--bdr);
+  background:linear-gradient(165deg, rgba(0,212,255,.06) 0%, var(--surf) 42%, rgba(124,92,252,.05) 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 8px 32px rgba(0,0,0,.22);
+}
+.comp-sel-panel::before{
+  content:'';
+  position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;
+  background:linear-gradient(180deg,#00d4ff,#5b8def 55%,#7c5cfc);
+  opacity:.9;
+}
+.comp-sel-lbl{
+  display:block;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  margin:0 0 7px 1px;
+}
+.comp-sel-inner{position:relative}
+.comp-sel{
+  display:block;width:100%;
+  appearance:none;-webkit-appearance:none;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+  line-height:1.4;
+  padding:10px 40px 10px 12px;
+  border-radius:8px;
+  border:1px solid var(--bdr2);
+  background:var(--surf2);
+  color:var(--text);
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.comp-sel:hover{
+  border-color:rgba(0,212,255,.28);
+  background:#1c2128;
+}
+.comp-sel:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,153,204,.18);
+}
+.comp-sel-inner::after{
+  content:'';
+  position:absolute;right:14px;top:50%;margin-top:-2px;
+  width:7px;height:7px;border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);
+  transform:rotate(45deg);pointer-events:none;opacity:.85;
+}
+.comp-sel option{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surf2);color:var(--text)}
+.reload-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
+  padding:9px 15px;align-self:center;
+  background:var(--surf2);color:var(--mid);
+  border:1px solid var(--bdr2);border-radius:8px;cursor:pointer;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.reload-btn:hover{border-color:rgba(0,212,255,.35);color:var(--text);background:#1a1f26}
 #stall-banner{display:none;border-radius:8px;padding:16px 20px;margin-bottom:18px;border:1px solid}
 #stall-banner.mode-input{background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.4)}
 #stall-banner.mode-pipeline{background:rgba(255,71,87,.07);border-color:rgba(255,71,87,.4)}
@@ -95,14 +147,19 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .al.warn .al-title{color:var(--warn)} .al.ok .al-title{color:var(--ok)}
 .al.info .al-title{color:var(--info)}
 .al-body{font-size:12px;color:var(--mid);font-family:'IBM Plex Mono',monospace}
-.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:22px}
+.stat-wrap{display:flex;flex-direction:column;gap:14px;margin-bottom:22px}
+.stat-group-hd{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 7px 2px}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px}
+.stat-row > .sc{min-width:0}
+.stat-legend{font-size:11px;color:var(--dim);margin:-2px 0 12px 2px;line-height:1.5;max-width:72ch}
+.stat-legend .sl-term{font-family:'IBM Plex Mono',monospace;color:var(--mid);font-weight:600}
 .sc{background:var(--surf);border:1px solid var(--bdr);border-radius:7px;padding:13px 15px}
 .sc.sw{border-color:rgba(255,184,48,.35);background:rgba(255,184,48,.04)}
 .sc.se{border-color:rgba(255,71,87,.35);background:rgba(255,71,87,.04)}
 .sc.sf{border-color:rgba(255,45,85,.45);background:rgba(255,45,85,.06)}
 .sc.si{border-color:rgba(0,212,255,.2);background:rgba(0,212,255,.03)}
 .sc-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:5px;display:flex;align-items:center;gap:5px}
-.sc-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;line-height:1;margin-bottom:3px}
+.sc-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;line-height:1.15;margin-bottom:3px;word-break:break-word;overflow-wrap:anywhere}
 .sc-val.ok{color:var(--ok)} .sc-val.warn{color:var(--warn)} .sc-val.err{color:var(--err)} .sc-val.crit{color:var(--crit)} .sc-val.na{color:var(--dim);font-size:16px}
 .sc-sub{font-size:11px;color:var(--dim)}
 .badge{font-size:8px;font-family:'IBM Plex Mono',monospace;padding:1px 5px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
@@ -154,6 +211,12 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 table.itbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
 table.itbl th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:7px 9px;border-bottom:1px solid var(--bdr);font-weight:600}
 table.itbl td{padding:9px 9px;border-bottom:1px solid var(--bdr);color:var(--mid)}
+table.itbl td.num,table.itbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.itbl th.num .th-hint{font-weight:400;letter-spacing:0;text-transform:none;font-size:9px;color:var(--dim);display:block;margin-top:2px}
+.inp-detail-note{font-size:11px;color:var(--dim);line-height:1.55;margin:0 0 12px;max-width:95ch}
+.inp-detail-note code{font-size:10px}
+.inp-status-legend{font-size:10px;color:var(--dim);margin:10px 0 0;padding:8px 10px;border-radius:6px;border:1px solid var(--bdr);background:var(--surf2);max-width:95ch;line-height:1.5}
+.inp-status-legend strong{color:var(--mid)}
 table.itbl tr:last-child td{border-bottom:none}
 table.itbl tr:hover td{background:var(--surf2)}
 .pill{display:inline-block;padding:2px 7px;border-radius:9px;font-size:9px;font-weight:600;letter-spacing:.04em}
@@ -199,7 +262,12 @@ table.itbl tr:hover td{background:var(--surf2)}
   <div class="dash-top">
     <div class="dash-meta">COMPONENT &nbsp;<b id="m-comp">&mdash;</b><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
     <div class="dash-actions">
-      <div class="comp-tabs" id="comp-tabs"></div>
+      <div class="comp-sel-panel">
+        <label class="comp-sel-lbl" for="comp-sel">Component</label>
+        <div class="comp-sel-inner">
+          <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+        </div>
+      </div>
       <button class="reload-btn" onclick="resetAll()">&#8617; reload</button>
     </div>
   </div>
@@ -209,7 +277,10 @@ table.itbl tr:hover td{background:var(--surf2)}
   <div class="health-grid" id="health-grid"></div>
   <div id="alerts"></div>
 
-  <div class="sec"><div class="sec-hd">Summary</div><div class="stat-row" id="stat-row"></div></div>
+  <div class="sec"><div class="sec-hd">Summary</div>
+    <p class="stat-legend">Subtitles state how each number is rolled up: <span class="sl-term">sum</span> = 30s counter deltas added across the window; <span class="sl-term">peak</span> = highest sample in the window; <span class="sl-term">mean</span> = average of samples per interval; <span class="sl-term">latest</span> = last interval only.</p>
+    <div class="stat-wrap" id="stat-wrap"></div>
+  </div>
 
   <div class="sec" id="sec-flow">
     <div class="sec-hd">Event flow by layer</div>
@@ -231,16 +302,27 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div id="inp-body">
       <div class="cc full">
         <div class="cc-title" style="margin-bottom:2px">Input detail</div>
-        <div class="cc-sub">FROZEN = count identical across all intervals &middot; CRITICAL = p99&gt;30s &middot; all times in ms</div>
+        <p class="inp-detail-note">Each column is from the <strong>latest 30&nbsp;s row</strong> in <code>D-input-processing.tsv</code> for that input. The underlying metric is <code>monitoring.dataset.&lt;input_id&gt;.processing_time.histogram</code> in the diagnostic NDJSON (extractor converts ns &rarr; ms). That histogram is a <strong>lifetime reservoir</strong>, not a per-window delta: mean / median / percentiles describe how long <strong>codec + input-side processing</strong> took for observations accumulated in the histogram since the input started.</p>
         <div class="tscroll">
           <table class="itbl">
-            <thead><tr><th>Input ID</th><th>Count</th><th>Mean</th><th>Median</th><th>P95</th><th>P99</th><th>Max</th><th>StdDev</th><th>Status</th></tr></thead>
+            <thead><tr>
+              <th>Input ID</th>
+              <th class="num" title="Histogram sample count: how many processing-time observations are in the lifetime reservoir for this input (same as histogram.count in Beats/Agent monitoring). Rises as new events are processed; if this number never changes across loaded intervals, the input is not adding new samples (idle tail, stalled publish path, or frozen metric).">Samples<span class="th-hint">histogram count</span></th>
+              <th class="num" title="Arithmetic mean of processing times in the reservoir (ms).">Mean</th>
+              <th class="num" title="Median processing time (ms).">Median</th>
+              <th class="num" title="95th percentile of processing time in the reservoir (ms).">P95</th>
+              <th class="num" title="99th percentile of processing time in the reservoir (ms).">P99</th>
+              <th class="num" title="Maximum observed processing time in the reservoir (ms).">Max</th>
+              <th class="num" title="Standard deviation of processing times in the reservoir (ms).">StdDev</th>
+              <th>Status</th>
+            </tr></thead>
             <tbody id="itbody"></tbody>
           </table>
         </div>
+        <div class="inp-status-legend"><strong>FROZEN</strong> &mdash; sample count is identical on every loaded interval (no new histogram observations in this capture). <strong>CRITICAL</strong> &mdash; P99 processing time &gt; 30&nbsp;s. <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
       </div>
       <div class="cgrid" style="margin-top:12px">
-        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime snapshot (ms)</div><div class="cc-sub">Reservoir values reflect all-time history. Frozen count = no new events processed since beat started.</div><div class="chart-fixed-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
+        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window.</div><div class="chart-fixed-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -257,8 +339,8 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="sec-hd">Output Delivery</div>
     <div class="cgrid">
       <div class="cc" id="cc-events"><div class="cc-title">Events per interval</div><div class="cc-sub">ACKED / FAILED / DROPPED &mdash; 30s counter deltas</div><canvas id="ch-events" height="175"></canvas></div>
-      <div class="cc" id="cc-lat"><div class="cc-title">Write latency (ms)</div><div class="cc-sub">MEAN / P95 / P99 / P999 / MAX &mdash; lifetime reservoir</div><canvas id="ch-lat" height="175"></canvas></div>
-      <div class="cc" id="cc-io"><div class="cc-title">Network I/O (bytes/interval)</div><div class="cc-sub">WRITE_B / READ_B &mdash; 30s deltas</div><canvas id="ch-io" height="175"></canvas></div>
+      <div class="cc" id="cc-lat"><div class="cc-title">Write latency</div><div class="cc-sub">MEAN / P95 / P99 / P999 / MAX &mdash; lifetime reservoir (ms in data; axis &amp; tooltips auto-scale to s / min / h)</div><canvas id="ch-lat" height="175"></canvas></div>
+      <div class="cc" id="cc-io"><div class="cc-title">Network I/O per interval</div><div class="cc-sub">WRITE_B / READ_B &mdash; 30&nbsp;s deltas (bytes in data; axis &amp; tooltips use KiB / MiB / GiB)</div><canvas id="ch-io" height="175"></canvas></div>
       <div class="cc" id="cc-err"><div class="cc-title">Error rates (%)</div><div class="cc-sub">429_% / DROP_% / DUPE_% / RETRY_% per interval</div><canvas id="ch-err" height="175"></canvas></div>
       <div class="cc" id="cc-ioerr"><div class="cc-title">Transport errors per interval</div><div class="cc-sub">WRITE_ERR (TLS/network) &middot; READ_ERR (response parse) &mdash; distinct from event-level FAILED</div><canvas id="ch-ioerr" height="175"></canvas></div>
     </div>
@@ -268,7 +350,7 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="sec-hd">Beat Resources</div>
     <div class="cgrid">
       <div class="cc"><div class="cc-title">Memory (MB)</div><div class="cc-sub">MEM_ALLOC_MB (Go heap, oscillates with GC) / RSS_MB (OS resident)</div><canvas id="ch-mem" height="175"></canvas></div>
-      <div class="cc"><div class="cc-title">CPU time per interval (ms)</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30s deltas</div><canvas id="ch-cpu" height="175"></canvas></div>
+      <div class="cc"><div class="cc-title">CPU time per interval</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30&nbsp;s deltas (ms in data; axis &amp; tooltips auto-scale)</div><canvas id="ch-cpu" height="175"></canvas></div>
       <div class="cc" id="cc-harv" style="display:none"><div class="cc-title">Harvester &amp; file handles</div><div class="cc-sub">HARV_RUNNING (active harvesters) &middot; HARV_FILES (open file handles). Zero harvesters = file reading stopped.</div><canvas id="ch-harv" height="175"></canvas></div>
       <div class="cc" id="cc-fd" style="display:none"><div class="cc-title">File descriptor usage</div><div class="cc-sub">FD_OPEN vs FD_LIMIT (soft ulimit). &gt;90% full = silent failures opening new files.</div><canvas id="ch-fd" height="175"></canvas></div>
     </div>
@@ -341,15 +423,33 @@ Chart.defaults.plugins.tooltip.backgroundColor='#181c22';Chart.defaults.plugins.
 Chart.defaults.plugins.tooltip.borderWidth=1;Chart.defaults.plugins.tooltip.titleColor='#c8d0db';
 Chart.defaults.plugins.tooltip.bodyColor='#8a96a8';Chart.defaults.plugins.tooltip.padding=10;
 
+function chartTooltipYFormat(kind){
+  if(!kind)return{};
+  return{tooltip:{callbacks:{label(ctx){
+    const v=ctx.parsed.y;
+    if(v==null||isNaN(v))return(ctx.dataset.label||'')+': --';
+    if(kind==='durationMs')return(ctx.dataset.label||'')+': '+fmtDurationMs(v);
+    if(kind==='bytes')return(ctx.dataset.label||'')+': '+fmtBytes(v);
+    if(kind==='compactNum')return(ctx.dataset.label||'')+': '+fmt(v);
+    return(ctx.dataset.label||'')+': '+String(v);
+  }}}};
+}
+
 function mkLine(id,labels,datasets,extraScales,lineOpts){
   lineOpts=lineOpts||{};
   if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
   const el=document.getElementById(id);if(!el)return;
   const maintainAR=lineOpts.maintainAspectRatio!==false;
+  const yFmt=lineOpts.yFormat;
+  const yTicks={maxTicksLimit:6};
+  if(yFmt==='durationMs')yTicks.callback=v=>fmtDurationMsAxis(v);
+  else if(yFmt==='bytes')yTicks.callback=v=>fmtBytes(v);
+  else if(yFmt==='compactNum')yTicks.callback=v=>fmt(Number(v));
+  const plugins={legend:{display:datasets.length>1},...chartTooltipYFormat(yFmt)};
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets},options:{
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
-    scales:{x:{ticks:{maxTicksLimit:8,maxRotation:0},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}},...(extraScales||{})},
-    plugins:{legend:{display:datasets.length>1}}
+    scales:{x:{ticks:{maxTicksLimit:8,maxRotation:0},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:yTicks},...(extraScales||{})},
+    plugins
   }});
 }
 
@@ -358,10 +458,15 @@ function mkBar(id,labels,datasets,barOpts){
   if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
   const el=document.getElementById(id);if(!el)return;
   const maintainAR=barOpts.maintainAspectRatio!==false;
+  const yFmt=barOpts.yFormat;
+  const yTicks={maxTicksLimit:6};
+  if(yFmt==='durationMs')yTicks.callback=v=>fmtDurationMsAxis(v);
+  else if(yFmt==='bytes')yTicks.callback=v=>fmtBytes(v);
+  const plugins={legend:{display:true},...chartTooltipYFormat(yFmt)};
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:{
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
-    scales:{x:{ticks:{maxTicksLimit:12,maxRotation:20},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}}},
-    plugins:{legend:{display:true}},elements:{bar:{borderRadius:3}}
+    scales:{x:{ticks:{maxTicksLimit:12,maxRotation:20},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:yTicks}},
+    plugins,elements:{bar:{borderRadius:3}}
   }});
 }
 
@@ -369,6 +474,53 @@ function mkBar(id,labels,datasets,barOpts){
 function thin(arr,n=60){if(arr.length<=n)return arr;const s=Math.ceil(arr.length/n);return arr.map((v,i)=>i%s===0?v:'');}
 function hhmm(ts){const m=String(ts||'').match(/T(\d{2}:\d{2})/);return m?m[1]:String(ts);}
 function fmt(n,dp=0){if(n==null||isNaN(n))return'--';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return Number(n).toFixed(dp);}
+function fmtMs(ms){if(ms==null||isNaN(ms)||ms<=0)return'--';if(ms<1000)return Math.round(ms)+'ms';const s=ms/1000;return (s>=100?s.toFixed(0):s>=10?s.toFixed(1):s.toFixed(2)).replace(/\.0+$/,'').replace(/(\.\d)0$/,'$1')+'s';}
+/** Human-readable duration from a millisecond count (tables, tooltips). */
+function fmtDurationMs(ms){
+  if(ms==null||isNaN(ms))return'--';
+  const n=Math.round(Number(ms));
+  if(n<0)return'--';
+  if(n===0)return'0 ms';
+  if(n<1000)return n+' ms';
+  const sec=n/1000;
+  if(sec<60){
+    const t=(sec>=10?sec.toFixed(0):sec.toFixed(1)).replace(/\.0+$/,'');
+    return t+' s';
+  }
+  if(sec<3600){
+    const mi=Math.floor(sec/60), rs=Math.round(sec-mi*60);
+    return mi+' min'+(rs>0?' '+rs+' s':'');
+  }
+  if(sec<86400){
+    const h=Math.floor(sec/3600), rem=sec-h*3600, mi=Math.floor(rem/60);
+    return h+' h'+(mi>0?' '+mi+' min':'');
+  }
+  const h=(sec/3600).toFixed(1).replace(/\.0$/,'');
+  return h+' h';
+}
+/** Compact Y-axis tick labels for duration (ms). */
+function fmtDurationMsAxis(ms){
+  if(ms==null||isNaN(ms))return'';
+  const n=Math.round(Number(ms));
+  if(n<1000)return n+'ms';
+  const sec=n/1000;
+  if(sec<120)return Math.round(sec)+'s';
+  if(sec<7200)return Math.round(sec/60)+'m';
+  if(sec<172800)return(sec/3600).toFixed(1).replace(/\.0$/,'')+'h';
+  return Math.round(sec/86400)+'d';
+}
+/** Binary IEC-style byte sizes for I/O and similar. */
+function fmtBytes(b){
+  if(b==null||isNaN(b))return'--';
+  const n=Number(b);
+  if(n<0)return'--';
+  if(n<1024)return Math.round(n)+' B';
+  if(n<1048576)return(n/1024>=100?(n/1024).toFixed(0):(n/1024).toFixed(1)).replace(/\.0$/,'')+' KiB';
+  if(n<1073741824)return(n/1048576>=100?(n/1048576).toFixed(0):(n/1048576).toFixed(1)).replace(/\.0$/,'')+' MiB';
+  return(n/1073741824).toFixed(2).replace(/\.00$/,'')+' GiB';
+}
+function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function inpTdDur(ms,css){const n=Number(ms)||0;return'<td class="num" style="'+(css||'')+'" title="'+n+' ms (exact)">'+fmtDurationMs(n)+'</td>';}
 function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
 function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
 function avgKey(rows,k){return rows.length?rows.reduce((s,r)=>s+(Number(r[k])||0),0)/rows.length:0;}
@@ -378,24 +530,24 @@ function isFlatLine(rows,k){if(!rows.length)return false;const f=Number(rows[0][
 
 // STAT CARD TOOLTIPS
 const STAT_TIPS = {
-  'Total Acked':   'Events successfully delivered to and acknowledged by the output (ES/Logstash). 30s counter delta. Zero here = nothing shipped during this entire window.',
-  'Success Rate':  'Acked / (Acked + Failed + Dropped). N/A when no events were attempted &mdash; not the same as 100% success.',
-  'Failed':        'Output-side delivery failures that will be retried. Non-zero = output is struggling but events are not yet lost.',
-  'Dropped':       'Events that exceeded the max retry count or were discarded. These are permanently lost. Any non-zero value is serious.',
-  'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). If this is non-zero while ACKED=0 = output worker deadlock. Stays 0 during input-layer stalls.',
-  'Lat P99':       'Write latency 99th percentile &mdash; lifetime reservoir, not a per-window delta. Flat line = stalled beat, reservoir not updated. &gt;3s = elevated, &gt;10s = critical.',
-  'Lat P999':      'Write latency 99.9th percentile. Large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates ES is hanging on a small fraction of bulk requests.',
-  'Queue Peak':    'Highest queue fill % seen this window. Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = inputs are silent, not that output is fast.',
-  'Retries':       'pipeline.events.retry total. Events re-entered the pipeline due to output failures. High retries + low drops = output struggling but recovering.',
-  'RSS':           'Resident Set Size &mdash; OS physical memory used by the beat process. Sustained growth (&gt;50MB per window) may indicate a memory leak.',
-  'Go Heap':       'Range of Go heap allocation in this window. Oscillation (e.g. 35&ndash;74 MB) is normal GC behavior. Monotonic growth without release = potential leak.',
-  'Uptime':        'Beat process uptime in hours. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
-  'Goroutines':    'Active Go goroutines. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
-  'Version':       'Beat version from monitoring metrics.',
-  'Harvesters':    'Active filebeat harvesters (tailers). Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
-  'Harvester FDs': 'File handles held open by filebeat harvesters. High value + stalled events = files held open but not producing (rotation or permission issue).',
-  'FD Usage':      'Open file descriptors vs soft ulimit. &gt;90% = risk of silent failures when opening new files, log rotation, or new inputs.',
-  'Registrar':     'Number of tracked file states in the filebeat registrar. &gt;100k causes slow startup and memory pressure.',
+  'Total Acked':   'Events successfully delivered to and acknowledged by the output (ES/Logstash). Each row is a 30s counter delta; the summary card sums those deltas over the loaded window. Zero = nothing shipped during this entire window.',
+  'Success Rate':  'Acked / (Acked + Failed + Dropped) using summed deltas over the window. N/A when no events were attempted &mdash; not the same as 100% success.',
+  'Failed':        'Output-side delivery failures that will be retried. Non-zero = output is struggling but events are not yet lost. Summary value is the sum of FAILED deltas.',
+  'Dropped':       'Events that exceeded the max retry count or were discarded. These are permanently lost. Summary value is the sum of DROPPED deltas.',
+  'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). Summary shows the mean OUT_ACTIVE gauge across intervals. If non-zero while ACKED=0 = output worker deadlock. Stays 0 during input-layer stalls.',
+  'Lat P99':       'Each row is a lifetime write-latency reservoir snapshot (99th percentile), not a per-interval delta. The summary card shows the peak LAT_P99 across loaded intervals. Flat chart line = stalled beat, reservoir not updated. &gt;3s = elevated, &gt;10s = critical.',
+  'Lat P999':      'Same reservoir semantics as Lat P99, 99.9th percentile. Summary shows the peak LAT_P999 across intervals. A large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates ES is hanging on a small fraction of bulk requests.',
+  'Queue Peak':    'Highest Q_PCT seen in the window (peak gauge). Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = inputs are silent, not that output is fast.',
+  'Retries':       'pipeline.events.retry: summary is the sum of RETRY deltas over the window. Events re-entered the pipeline due to output failures. High retries + low drops = output struggling but recovering.',
+  'RSS':           'Resident Set Size &mdash; OS physical memory. Card shows the latest sample; subtitle gives change from first to last row in the window. Sustained growth (&gt;50MB) may indicate a memory leak.',
+  'Go Heap':       'max(MEM_ALLOC_MB) &minus; min(MEM_ALLOC_MB) in the window (heap swing from GC). Oscillation is normal; monotonic growth without release = potential leak.',
+  'Uptime':        'Beat process uptime from the latest row. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
+  'Goroutines':    'Active Go goroutines from the latest row. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
+  'Version':       'Beat version string from the latest metrics row.',
+  'Harvesters':    'HARV_RUNNING from the latest row. Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
+  'Harvester FDs': 'HARV_FILES from the latest row. High value + stalled events = files held open but not producing (rotation or permission issue).',
+  'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk of silent failures when opening new files, log rotation, or new inputs.',
+  'Registrar':     'Maximum REGISTRAR value seen in the window. &gt;100k tracked file states causes slow startup and memory pressure.',
   'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (ES rejected the event). Nonzero = network/TLS issue.',
   'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = ES sent a response the beat could not interpret.',
 };
@@ -421,12 +573,21 @@ function mkAlertGroup(level,title,items,openByDefault){
   return body;
 }
 
+let _statTargetRow=null;
+function beginStatSection(title){
+  const wrap=document.getElementById('stat-wrap');
+  const g=document.createElement('div');g.className='stat-group';
+  const hd=document.createElement('div');hd.className='stat-group-hd';hd.textContent=title;
+  const row=document.createElement('div');row.className='stat-row';
+  g.appendChild(hd);g.appendChild(row);wrap.appendChild(g);
+  _statTargetRow=row;
+}
 function mkStat(label,val,sub,valCls,cardCls,badge){
   const d=document.createElement('div');d.className='sc '+(cardCls||'');
   const bh=badge?`<span class="badge ${badge.cls}">${badge.text}</span>`:'';
   const tip=STAT_TIPS[label]?`<div class="sc-tip">${STAT_TIPS[label]}</div>`:'';
   d.innerHTML=`<div class="sc-label">${label}${bh}</div><div class="sc-val ${valCls||''}">${val}</div><div class="sc-sub">${sub}</div>${tip}`;
-  document.getElementById('stat-row').appendChild(d);
+  _statTargetRow.appendChild(d);
 }
 
 function mkHealth(icon,label,cls){
@@ -517,21 +678,26 @@ function showDashboard(){
   document.getElementById('pg-dash').style.display='block';
   const cs=new Set();
   Object.values(DATA).forEach(rows=>{if(rows)rows.forEach(r=>{if(r.COMPONENT_ID)cs.add(r.COMPONENT_ID);});});
-  const comps=[...cs];
-  const te=document.getElementById('comp-tabs');te.innerHTML='';
-  comps.forEach((cid,i)=>{
-    const b=document.createElement('button');b.className='ctab'+(i===0?' on':'');
-    b.textContent=cid.length>32?'\u2026'+cid.slice(-26):cid;b.title=cid;
-    b.onclick=()=>{te.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderComp(cid);};
-    te.appendChild(b);
+  const comps=[...cs].sort((a,b)=>String(a).localeCompare(String(b)));
+  const sel=document.getElementById('comp-sel');
+  sel.innerHTML='';
+  comps.forEach(cid=>{
+    const o=document.createElement('option');
+    o.value=cid;
+    o.textContent=cid;
+    sel.appendChild(o);
   });
-  if(comps.length>0)renderComp(comps[0]);
+  sel.onchange=()=>renderComp(sel.value);
+  if(comps.length>0){sel.value=comps[0];renderComp(comps[0]);}
   else{document.getElementById('alerts').innerHTML='';mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');}
 }
 
 function renderComp(cid){
+  const sel=document.getElementById('comp-sel');
+  if(sel&&[...sel.options].some(o=>o.value===cid))sel.value=cid;
   document.getElementById('alerts').innerHTML='';
-  document.getElementById('stat-row').innerHTML='';
+  document.getElementById('stat-wrap').innerHTML='';
+  _statTargetRow=null;
   document.getElementById('health-grid').innerHTML='';
   document.getElementById('flow-row').innerHTML='';
   document.querySelectorAll('.cc.stalled,.cc.frozen-data,.cc.deadlock').forEach(el=>el.classList.remove('stalled','frozen-data','deadlock'));
@@ -674,13 +840,13 @@ function renderComp(cid){
     const latFlat=isFlatLine(A,'LAT_P99');
     if(!latFlat){
       if(p999p>30000)
-        critAlerts.push(['error','Write latency p999='+fmt(p999p)+'ms \u2014 extreme tail',
-          'p999 exceeds 30s (p99='+fmt(p99p)+'ms, spread='+fmt(p999p-p99p)+'ms). A fraction of bulk requests are hanging for very long. '+
+        critAlerts.push(['error','Write latency p999='+fmtDurationMs(p999p)+' \u2014 extreme tail',
+          'p999 exceeds 30\u00a0s (p99='+fmtDurationMs(p99p)+', spread='+fmtDurationMs(p999p-p99p)+'). A fraction of bulk requests are hanging for very long. '+
           'Causes: ES bulk thread pool exhaustion, ILM rollover blocking, GC pauses. Check /_nodes/hot_threads.']);
       else if(p99p>10000)
-        critAlerts.push(['error','Write latency p99='+fmt(p99p)+'ms','Exceeds 10s. p999='+fmt(p999p)+'ms. ES pressure or slow network.']);
+        critAlerts.push(['error','Write latency p99='+fmtDurationMs(p99p),'Exceeds 10\u00a0s. p999='+fmtDurationMs(p999p)+'. ES pressure or slow network.']);
       else if(p99p>3000)
-        warnAlerts.push(['warn','Write latency p99='+fmt(p99p)+'ms (elevated)','Above 3s. p999='+fmt(p999p)+'ms.']);
+        warnAlerts.push(['warn','Write latency p99='+fmtDurationMs(p99p)+' (elevated)','Above 3\u00a0s. p999='+fmtDurationMs(p999p)+'.']);
     }
     // Frozen latency: already shown via HISTORICAL badge on stat cards and frozen-data chart subtitle — suppress alert.
 
@@ -741,10 +907,10 @@ function renderComp(cid){
       else if(p99>30000)ho.push({iid,p99});
     });
     if(fh.length)critAlerts.push(['error',fh.length+' input(s) stalled with high processing latency',
-      'Count frozen AND p99&gt;30s:<br>'+fh.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (count='+x.count+', p99='+x.p99+'ms)').join('<br>')]);
-    if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (count frozen)',
-      'Count unchanged across all intervals:<br>'+fo.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (count='+x.count+')').join('<br>')]);
-    ho.forEach(x=>critAlerts.push(['error','Input p99='+x.p99+'ms \u2014 '+x.iid.slice(-32),'Processing p99>30s.']));
+      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')').join('<br>')]);
+    if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (histogram frozen)',
+      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (samples='+fmt(x.count)+')').join('<br>')]);
+    ho.forEach(x=>critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+x.iid.slice(-32),'Processing P99 exceeds 30\u00a0s.']));
   }
 
   // ── POSITIVE SIGNALS (collapsed by default) ──────────
@@ -828,55 +994,60 @@ function renderComp(cid){
     infoAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
   }
 
-  // SUMMARY STATS
+  // SUMMARY STATS (grouped: output → pipeline → beat)
   if(A.length){
+    beginStatSection('Output delivery & write latency');
     const totDrop=sumKey(A,'DROPPED'),total=totAck+totFail+totDrop;
     const pct=total>0?(totAck/total*100).toFixed(1)+'%':null;
     const p99=maxKey(A,'LAT_P99'),p999=maxKey(A,'LAT_P999');
     const latFlat=isFlatLine(A,'LAT_P99');
-    mkStat('Total Acked',fmt(totAck),'events delivered',totAck===0?'crit':'ok',totAck===0?'sf':'');
-    mkStat('Success Rate',pct||'N/A',pct?'of attempted':'no events attempted',pct?(parseFloat(pct)>=99?'ok':parseFloat(pct)>=95?'warn':'err'):'na',!pct?'sf':'');
-    mkStat('Failed',fmt(totFail),'retryable errors',totFail>0?'warn':'',totFail>0?'sw':'');
-    mkStat('Dropped',fmt(totDrop),'permanent losses',totDrop>0?'err':'',totDrop>0?'se':'');
+    const latSub99=latFlat&&isStalled?'peak (frozen reservoir — pre-stall)':'peak reservoir per row; 99th %ile write latency';
+    const latSub999=latFlat&&isStalled?'peak (frozen reservoir — pre-stall)':'peak reservoir per row; 99.9th %ile';
+    mkStat('Total Acked',fmt(totAck),'sum: ACKED deltas (30s buckets)',totAck===0?'crit':'ok',totAck===0?'sf':'');
+    mkStat('Success Rate',pct||'N/A',pct?'window total: ack÷(ack+fail+drop)':'no events attempted',pct?(parseFloat(pct)>=99?'ok':parseFloat(pct)>=95?'warn':'err'):'na',!pct?'sf':'');
+    mkStat('Failed',fmt(totFail),'sum: FAILED deltas',totFail>0?'warn':'',totFail>0?'sw':'');
+    mkStat('Dropped',fmt(totDrop),'sum: DROPPED deltas',totDrop>0?'err':'',totDrop>0?'se':'');
     const outAvg=avgKey(A,'OUT_ACTIVE');
-    mkStat('OUT_ACTIVE',fmt(outAvg,0),'avg in-flight to output',stallLayer==='deadlock'?'crit':outAvg>100?'warn':'',stallLayer==='deadlock'?'sf':'');
-    mkStat('Lat P99',p99>0?p99+'ms':'--',latFlat&&isStalled?'pre-stall snapshot':'write latency',p99>10000?'err':p99>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
-    mkStat('Lat P999',p999>0?p999+'ms':'--',latFlat&&isStalled?'pre-stall snapshot':'99.9th percentile',p999>30000?'crit':p999>10000?'err':p999>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
+    mkStat('OUT_ACTIVE',fmt(outAvg,0),'mean gauge per interval',stallLayer==='deadlock'?'crit':outAvg>100?'warn':'',stallLayer==='deadlock'?'sf':'');
+    mkStat('Lat P99',fmtMs(p99),latSub99,p99>10000?'err':p99>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
+    mkStat('Lat P999',fmtMs(p999),latSub999,p999>30000?'crit':p999>10000?'err':p999>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
   }
   if(B.length){
+    beginStatSection('Pipeline & queue');
     const qp=(maxKey(B,'Q_PCT')*100).toFixed(0)+'%';
-    mkStat('Queue Peak',qp,isStalled&&qp==='0%'?'empty (inputs stalled)':'max fill',parseFloat(qp)>=100?'crit':parseFloat(qp)>=80?'warn':'',isStalled&&qp==='0%'?'si':'',isStalled&&qp==='0%'?{cls:'stall',text:'STALL'}:null);
-    mkStat('Retries',fmt(sumKey(B,'RETRY')),'pipeline retries',sumKey(B,'RETRY')>0?'warn':'');
+    mkStat('Queue Peak',qp,(isStalled&&qp==='0%'?'empty (inputs stalled)':'peak: max Q_PCT in window'),parseFloat(qp)>=100?'crit':parseFloat(qp)>=80?'warn':'',isStalled&&qp==='0%'?'si':'',isStalled&&qp==='0%'?{cls:'stall',text:'STALL'}:null);
+    mkStat('Retries',fmt(sumKey(B,'RETRY')),'sum: RETRY deltas',sumKey(B,'RETRY')>0?'warn':'');
   }
   if(C.length){
+    beginStatSection('Beat process & resources');
     const last=C[C.length-1];
     const rss=C.map(r=>Number(r.RSS_MB)||0).filter(v=>v>0);
     const rssG=rss.length>1?(rss[rss.length-1]-rss[0]).toFixed(0):'0';
     const allocR=Math.max(...C.map(r=>Number(r.MEM_ALLOC_MB)||0))-Math.min(...C.map(r=>Number(r.MEM_ALLOC_MB)||0));
-    mkStat('RSS',(Number(last.RSS_MB)||0).toFixed(0)+' MB','+'+rssG+'MB over window','');
-    mkStat('Go Heap',allocR.toFixed(0)+' MB swing','GC oscillation (healthy)','');
-    mkStat('Uptime',fmt((Number(last.UPTIME_s)||0)/3600,1)+'h','no restarts','ok');
-    mkStat('Goroutines',String(last.GOROUTINES||'--'),'runtime goroutines','');
-    mkStat('Version',String(last.VERSION||'--'),'beat version','');
+    mkStat('RSS',(Number(last.RSS_MB)||0).toFixed(0)+' MB','latest sample; +'+rssG+' MB vs first row','');
+    mkStat('Go Heap',allocR.toFixed(0)+' MB swing','peak-to-peak: max(alloc) - min(alloc); GC sawtooth is normal','');
+    mkStat('Uptime',fmt((Number(last.UPTIME_s)||0)/3600,1)+'h','latest gauge','ok');
+    mkStat('Goroutines',String(last.GOROUTINES||'--'),'latest gauge','');
+    mkStat('Version',String(last.VERSION||'--'),'latest row','');
     // Filebeat-specific cards — only shown when field is present
     const harvRunVals = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
     if(harvRunVals.length > 0){
       const lastHarv = Number(harvRunVals[harvRunVals.length-1]);
       const lastFiles = Number(C[C.length-1].HARV_FILES)||0;
-      mkStat('Harvesters', String(lastHarv), 'active file readers',
+      mkStat('Harvesters', String(lastHarv), 'latest gauge (active readers)',
         lastHarv===0?'crit':lastHarv<3?'warn':'', lastHarv===0?'sf':'');
-      mkStat('Harvester FDs', String(lastFiles), 'file handles open by harvesters', '');
+      mkStat('Harvester FDs', String(lastFiles), 'latest gauge (open handles)', '');
     }
     const fdOpenVals = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
     const fdLimitVals = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
     if(fdOpenVals.length > 0 && fdLimitVals.length > 0){
       const pct = Math.round(fdOpenVals[fdOpenVals.length-1] / fdLimitVals[fdLimitVals.length-1] * 100);
-      mkStat('FD Usage', pct+'%', 'of soft fd limit',
+      mkStat('FD Usage', pct+'%', 'latest: FD_OPEN ÷ FD_LIMIT',
         pct>90?'crit':pct>75?'warn':'', pct>90?'sf':pct>75?'sw':'');
     }
     const regVals = C.map(r=>Number(r.REGISTRAR)).filter(v=>v>0);
     if(regVals.length > 0)
-      mkStat('Registrar', fmt(Math.max(...regVals)), 'tracked file states',
+      mkStat('Registrar', fmt(Math.max(...regVals)), 'peak: max tracked file states',
         Math.max(...regVals)>100000?'warn':'', Math.max(...regVals)>100000?'sw':'');
   }
 
@@ -898,18 +1069,18 @@ function renderComp(cid){
       {label:'ACKED',data:A.map(r=>Number(r.ACKED)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
       {label:'FAILED',data:A.map(r=>Number(r.FAILED)||0),borderColor:'#ffb830'},
       {label:'DROPPED',data:A.map(r=>Number(r.DROPPED)||0),borderColor:'#ff4757'},
-    ]);
+    ],null,{yFormat:'compactNum'});
     mkLine('ch-lat',labels,[
       {label:'MEAN',data:A.map(r=>Number(r.LAT_MEAN)||0),borderColor:'#00d4ff'},
       {label:'P95',data:A.map(r=>Number(r.LAT_P95)||0),borderColor:'#7c5cfc'},
       {label:'P99',data:A.map(r=>Number(r.LAT_P99)||0),borderColor:'#ffb830'},
       {label:'P999',data:A.map(r=>Number(r.LAT_P999)||0),borderColor:'#ff2d55',borderDash:[5,3]},
       {label:'MAX',data:A.map(r=>Number(r.LAT_MAX)||0),borderColor:'#ff4757',borderDash:[3,3],borderWidth:1},
-    ]);
+    ],null,{yFormat:'durationMs'});
     mkLine('ch-io',labels,[
       {label:'WRITE_B',data:A.map(r=>Number(r.WRITE_B)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'READ_B',data:A.map(r=>Number(r.READ_B)||0),borderColor:'#7c5cfc'},
-    ]);
+    ],null,{yFormat:'bytes'});
   }
   if(E.length)
     mkLine('ch-err',thin(E.map(r=>hhmm(r.TIMESTAMP))),[
@@ -928,7 +1099,7 @@ function renderComp(cid){
       ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true});
     }
     if(B.length)ds.push({label:'PIPE_ACTIVE (pipeline)',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'});
-    mkLine('ch-layer',fl,ds,null,{maintainAspectRatio:false});
+    mkLine('ch-layer',fl,ds,null,{maintainAspectRatio:false,yFormat:'compactNum'});
   }
 
   if(B.length){
@@ -936,13 +1107,13 @@ function renderComp(cid){
     mkLine('ch-q',bl,[
       {label:'Q_FILLED',data:B.map(r=>Number(r.Q_FILLED)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'Q_PCT %',data:B.map(r=>(Number(r.Q_PCT)||0)*100),borderColor:'#ff4757',yAxisID:'y2'},
-    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{maintainAspectRatio:false});
+    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{maintainAspectRatio:false,yFormat:'compactNum'});
     mkLine('ch-pipe',bl,[
       {label:'CLIENTS',data:B.map(r=>Number(r.CLIENTS)||0),borderColor:'#00c875'},
       {label:'PIPE_ACTIVE',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'},
       {label:'RETRY',data:B.map(r=>Number(r.RETRY)||0),borderColor:'#ffb830'},
       {label:'MODULES',data:B.map(r=>Number(r.MODULES)||0),borderColor:'#7c5cfc',borderDash:[4,3]},
-    ],null,{maintainAspectRatio:false});
+    ],null,{maintainAspectRatio:false,yFormat:'compactNum'});
   }
 
   if(C.length){
@@ -955,7 +1126,7 @@ function renderComp(cid){
       {label:'CPU_TOTAL_ms',data:C.map(r=>Number(r.CPU_TOTAL_ms)||0),borderColor:'#ffb830'},
       {label:'CPU_USER_ms',data:C.map(r=>Number(r.CPU_USER_ms)||0),borderColor:'#00c875'},
       {label:'CPU_SYS_ms',data:C.map(r=>Number(r.CPU_SYS_ms)||0),borderColor:'#ff6b6b'},
-    ]);
+    ],null,{yFormat:'durationMs'});
   }
 
   // Transport errors chart — always render when A available
@@ -965,7 +1136,7 @@ function renderComp(cid){
     mkLine('ch-ioerr',labels,[
       {label:'WRITE_ERR',data:A.map(r=>Number(r.WRITE_ERR)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true},
       {label:'READ_ERR', data:A.map(r=>Number(r.READ_ERR)||0), borderColor:'#ffb830'},
-    ]);
+    ],null,{yFormat:'compactNum'});
   }
 
   // Harvester + FD charts — only shown when data is present (filebeat only)
@@ -977,7 +1148,7 @@ function renderComp(cid){
       mkLine('ch-harv',cl,[
         {label:'HARV_RUNNING (active)',data:C.map(r=>Number(r.HARV_RUNNING)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
         {label:'HARV_FILES (open FDs)', data:C.map(r=>Number(r.HARV_FILES)||0), borderColor:'#7c5cfc'},
-      ]);
+      ],null,{yFormat:'compactNum'});
     }
     const fdOpenVals2 = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
     const fdLimitVals2 = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
@@ -996,7 +1167,7 @@ function renderComp(cid){
     }
   }
 
-  // INPUT TABLE — D is per component tab; extractor only emits inputs with histogram.count>0 (see elastic-agent-perf.sh)
+  // INPUT TABLE — D is scoped by selected component; extractor only emits inputs with histogram.count>0 (see elastic-agent-perf.sh)
   const inpSec=document.getElementById('sec-inp');
   const inpBody=document.getElementById('inp-body');
   const inpHint=document.getElementById('inp-empty-hint');
@@ -1008,11 +1179,11 @@ function renderComp(cid){
     const ids=[...new Set(D.map(r=>r.INPUT_ID))];
     const lasts=ids.map(id=>D.filter(r=>r.INPUT_ID===id).pop());
     mkBar('ch-ibar',lasts.map(r=>{const id=String(r.INPUT_ID||'');return id.length>28?'\u2026'+id.slice(-22):id;}),[
-      {label:'MEAN_ms',data:lasts.map(r=>Number(r.MEAN_ms)||0),backgroundColor:'rgba(0,212,255,.65)'},
-      {label:'P95_ms',data:lasts.map(r=>Number(r.P95_ms)||0),backgroundColor:'rgba(124,92,252,.65)'},
-      {label:'P99_ms',data:lasts.map(r=>Number(r.P99_ms)||0),backgroundColor:'rgba(255,184,48,.65)'},
-      {label:'MAX_ms',data:lasts.map(r=>Number(r.MAX_ms)||0),backgroundColor:'rgba(255,71,87,.65)'},
-    ],{maintainAspectRatio:false});
+      {label:'Mean',data:lasts.map(r=>Number(r.MEAN_ms)||0),backgroundColor:'rgba(0,212,255,.65)'},
+      {label:'P95',data:lasts.map(r=>Number(r.P95_ms)||0),backgroundColor:'rgba(124,92,252,.65)'},
+      {label:'P99',data:lasts.map(r=>Number(r.P99_ms)||0),backgroundColor:'rgba(255,184,48,.65)'},
+      {label:'Max',data:lasts.map(r=>Number(r.MAX_ms)||0),backgroundColor:'rgba(255,71,87,.65)'},
+    ],{maintainAspectRatio:false,yFormat:'durationMs'});
     const tbody=document.getElementById('itbody');tbody.innerHTML='';
     ids.forEach(id=>{
       const rows=D.filter(r=>r.INPUT_ID===id);
@@ -1027,12 +1198,16 @@ function renderComp(cid){
       else{pc='ok';pt='OK';}
       const sid=id.length>44?id.slice(0,20)+'\u2026'+id.slice(-18):id;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td title="${id}" style="color:var(--text);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sid}</td>
-        <td>${fmt(Number(r.COUNT))}</td><td>${r.MEAN_ms}</td><td>${r.MEDIAN_ms}</td>
-        <td style="${Number(r.P95_ms)>10000?'color:var(--warn)':''}">${r.P95_ms}</td>
-        <td style="${Number(r.P99_ms)>10000?'color:var(--err)':''}">${r.P99_ms}</td>
-        <td style="${Number(r.MAX_ms)>30000?'color:var(--crit)':''}">${r.MAX_ms}</td>
-        <td>${r.STDDEV_ms}</td><td><span class="pill ${pc}">${pt}</span></td>`;
+      const cnt=Number(r.COUNT)||0;
+      const p95s=Number(r.P95_ms)>10000?'color:var(--warn);':'';
+      const p99s=Number(r.P99_ms)>10000?'color:var(--err);':'';
+      const maxs=Number(r.MAX_ms)>30000?'color:var(--crit);':'';
+      tr.innerHTML='<td title="'+escAttr(id)+'" style="color:var(--text);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sid+'</td>'+
+        '<td class="num" title="histogram.count = '+cnt+' (exact)">'+fmt(cnt)+'</td>'+
+        inpTdDur(r.MEAN_ms,'')+inpTdDur(r.MEDIAN_ms,'')+
+        inpTdDur(r.P95_ms,p95s)+inpTdDur(r.P99_ms,p99s)+inpTdDur(r.MAX_ms,maxs)+
+        inpTdDur(r.STDDEV_ms,'')+
+        '<td><span class="pill '+pc+'">'+pt+'</span></td>';
       tbody.appendChild(tr);
     });
   }else{
@@ -1046,7 +1221,7 @@ function renderComp(cid){
       const compsWithD=new Set(DATA.D.map(r=>String(r.COMPONENT_ID||'').trim()));
       const hasOther=[...compsWithD].some(c=>c!==cTab);
       inpEmptyText.innerHTML=hasOther
-        ?'Table D is scoped to the <b>selected component</b> (tabs at the top). This component has no per-input rows, but other component IDs do appear in <code>D-input-processing.tsv</code> &mdash; switch tabs to see their charts and table.'
+        ?'Table D is scoped to the <b>selected component</b> (Component dropdown above). This component has no per-input rows, but other component IDs do appear in <code>D-input-processing.tsv</code> &mdash; choose another component to see its charts and table.'
         :'The extractor (<code>elastic-agent-perf.sh</code>, Table D) only writes rows when <code>monitoring.dataset.&lt;input&gt;.processing_time.histogram.count &gt; 0</code> in the diagnostic NDJSON. Inputs that were idle for the whole capture, or integrations that do not publish this histogram, never appear. If you expected multiple inputs on <i>this</i> component, only the ones that actually processed events during the window are listed.';
     }else{
       inpSec.style.display='none';

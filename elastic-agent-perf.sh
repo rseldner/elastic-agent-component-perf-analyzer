@@ -324,7 +324,8 @@ run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
 # ─────────────────────────────────────────────────────────────────────────────
 # Table D -- Per-Input Processing Times (active inputs only)
 # Histograms are lifetime reservoirs (nanoseconds -> milliseconds)
-# Frozen count across all intervals = no new events since beat started
+# COUNT = processing_time.histogram.count (number of latency observations in the reservoir, not "events/sec")
+# Frozen count across all intervals = no new histogram observations in this capture window
 # ─────────────────────────────────────────────────────────────────────────────
 run_table "Table D: Per-Input Processing" "D-input-processing.tsv" '
   ["TIMESTAMP","COMPONENT_ID","INPUT_ID",
