@@ -22,7 +22,7 @@
 #   A-output-health.tsv     — libbeat output counters + write latency
 #   B-pipeline-queue.tsv    — pipeline event flow + queue depth
 #   C-beat-resources.tsv    — CPU, memory, goroutines, filebeat harvester gauges (when present)
-#   D-input-processing.tsv  — per-input codec processing latency (active only)
+#   D-input-processing.tsv  — per-input codec processing latency (inputs with histogram.count>0 only)
 #   E-health-ratios.tsv     — derived success/error/saturation ratios
 #
 # Field notes:

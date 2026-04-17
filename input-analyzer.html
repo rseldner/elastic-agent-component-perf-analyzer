@@ -142,6 +142,8 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:12px}
 .cc{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 16px 13px}
 .cc.full{grid-column:1/-1}
+/* Full-row charts otherwise grow with viewport width (Chart.js default aspect ratio). */
+.chart-fixed-h{position:relative;height:min(260px,42vh);min-height:200px;width:100%}
 .cc.stalled{border-color:rgba(255,45,85,.25)}
 .cc.stalled .cc-title::after{content:' \2014 ALL ZERO';font-size:9px;font-weight:400;color:var(--crit);letter-spacing:.06em}
 .cc.frozen-data .cc-sub::before{content:'\26A0 frozen reservoir \2014 values from before this window  \B7  ';color:rgba(255,184,48,.7)}
@@ -209,6 +211,48 @@ table.itbl tr:hover td{background:var(--surf2)}
 
   <div class="sec"><div class="sec-hd">Summary</div><div class="stat-row" id="stat-row"></div></div>
 
+  <div class="sec" id="sec-flow">
+    <div class="sec-hd">Event flow by layer</div>
+    <div class="cgrid">
+      <div class="cc full" id="cc-layer">
+        <div class="cc-title">In-flight events per pipeline layer</div>
+        <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
+        <div class="chart-fixed-h"><canvas id="ch-layer" height="175"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-inp" style="display:none">
+    <div class="sec-hd">Input Processing</div>
+    <div id="inp-empty-hint" class="cc full" style="display:none">
+      <div class="cc-title">No per-input rows for this view</div>
+      <div class="cc-sub" id="inp-empty-text"></div>
+    </div>
+    <div id="inp-body">
+      <div class="cc full">
+        <div class="cc-title" style="margin-bottom:2px">Input detail</div>
+        <div class="cc-sub">FROZEN = count identical across all intervals &middot; CRITICAL = p99&gt;30s &middot; all times in ms</div>
+        <div class="tscroll">
+          <table class="itbl">
+            <thead><tr><th>Input ID</th><th>Count</th><th>Mean</th><th>Median</th><th>P95</th><th>P99</th><th>Max</th><th>StdDev</th><th>Status</th></tr></thead>
+            <tbody id="itbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="cgrid" style="margin-top:12px">
+        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime snapshot (ms)</div><div class="cc-sub">Reservoir values reflect all-time history. Frozen count = no new events processed since beat started.</div><div class="chart-fixed-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-pipe">
+    <div class="sec-hd">Pipeline &amp; Queue</div>
+    <div class="cgrid">
+      <div class="cc" id="cc-q"><div class="cc-title">Queue fill</div><div class="cc-sub">Q_FILLED events (left axis) &middot; Q_PCT % (right axis)</div><div class="chart-fixed-h"><canvas id="ch-q" height="175"></canvas></div></div>
+      <div class="cc" id="cc-pipe"><div class="cc-title">Pipeline activity</div><div class="cc-sub">CLIENTS / PIPE_ACTIVE / RETRY / MODULES</div><div class="chart-fixed-h"><canvas id="ch-pipe" height="175"></canvas></div></div>
+    </div>
+  </div>
+
   <div class="sec" id="sec-out">
     <div class="sec-hd">Output Delivery</div>
     <div class="cgrid">
@@ -220,25 +264,6 @@ table.itbl tr:hover td{background:var(--surf2)}
     </div>
   </div>
 
-  <div class="sec" id="sec-flow">
-    <div class="sec-hd">Event flow by layer</div>
-    <div class="cgrid">
-      <div class="cc full" id="cc-layer">
-        <div class="cc-title">In-flight events per pipeline layer</div>
-        <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
-        <canvas id="ch-layer" height="175"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec" id="sec-pipe">
-    <div class="sec-hd">Pipeline &amp; Queue</div>
-    <div class="cgrid">
-      <div class="cc" id="cc-q"><div class="cc-title">Queue fill</div><div class="cc-sub">Q_FILLED events (left axis) &middot; Q_PCT % (right axis)</div><canvas id="ch-q" height="175"></canvas></div>
-      <div class="cc" id="cc-pipe"><div class="cc-title">Pipeline activity</div><div class="cc-sub">CLIENTS / PIPE_ACTIVE / RETRY / MODULES</div><canvas id="ch-pipe" height="175"></canvas></div>
-    </div>
-  </div>
-
   <div class="sec" id="sec-res">
     <div class="sec-hd">Beat Resources</div>
     <div class="cgrid">
@@ -246,23 +271,6 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="cc"><div class="cc-title">CPU time per interval (ms)</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30s deltas</div><canvas id="ch-cpu" height="175"></canvas></div>
       <div class="cc" id="cc-harv" style="display:none"><div class="cc-title">Harvester &amp; file handles</div><div class="cc-sub">HARV_RUNNING (active harvesters) &middot; HARV_FILES (open file handles). Zero harvesters = file reading stopped.</div><canvas id="ch-harv" height="175"></canvas></div>
       <div class="cc" id="cc-fd" style="display:none"><div class="cc-title">File descriptor usage</div><div class="cc-sub">FD_OPEN vs FD_LIMIT (soft ulimit). &gt;90% full = silent failures opening new files.</div><canvas id="ch-fd" height="175"></canvas></div>
-    </div>
-  </div>
-
-  <div class="sec" id="sec-inp" style="display:none">
-    <div class="sec-hd">Input Processing</div>
-    <div class="cgrid">
-      <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime snapshot (ms)</div><div class="cc-sub">Reservoir values reflect all-time history. Frozen count = no new events processed since beat started.</div><canvas id="ch-ibar" height="200"></canvas></div>
-    </div>
-    <div class="cc full" style="margin-top:12px">
-      <div class="cc-title" style="margin-bottom:2px">Input detail</div>
-      <div class="cc-sub">FROZEN = count identical across all intervals &middot; CRITICAL = p99&gt;30s &middot; all times in ms</div>
-      <div class="tscroll">
-        <table class="itbl">
-          <thead><tr><th>Input ID</th><th>Count</th><th>Mean</th><th>Median</th><th>P95</th><th>P99</th><th>Max</th><th>StdDev</th><th>Status</th></tr></thead>
-          <tbody id="itbody"></tbody>
-        </table>
-      </div>
     </div>
   </div>
 </div>
@@ -333,21 +341,25 @@ Chart.defaults.plugins.tooltip.backgroundColor='#181c22';Chart.defaults.plugins.
 Chart.defaults.plugins.tooltip.borderWidth=1;Chart.defaults.plugins.tooltip.titleColor='#c8d0db';
 Chart.defaults.plugins.tooltip.bodyColor='#8a96a8';Chart.defaults.plugins.tooltip.padding=10;
 
-function mkLine(id,labels,datasets,extraScales){
+function mkLine(id,labels,datasets,extraScales,lineOpts){
+  lineOpts=lineOpts||{};
   if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
   const el=document.getElementById(id);if(!el)return;
+  const maintainAR=lineOpts.maintainAspectRatio!==false;
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets},options:{
-    responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+    responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
     scales:{x:{ticks:{maxTicksLimit:8,maxRotation:0},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}},...(extraScales||{})},
     plugins:{legend:{display:datasets.length>1}}
   }});
 }
 
-function mkBar(id,labels,datasets){
+function mkBar(id,labels,datasets,barOpts){
+  barOpts=barOpts||{};
   if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
   const el=document.getElementById(id);if(!el)return;
+  const maintainAR=barOpts.maintainAspectRatio!==false;
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:{
-    responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+    responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
     scales:{x:{ticks:{maxTicksLimit:12,maxRotation:20},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}}},
     plugins:{legend:{display:true}},elements:{bar:{borderRadius:3}}
   }});
@@ -360,7 +372,7 @@ function fmt(n,dp=0){if(n==null||isNaN(n))return'--';if(Math.abs(n)>=1e9)return(
 function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
 function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
 function avgKey(rows,k){return rows.length?rows.reduce((s,r)=>s+(Number(r[k])||0),0)/rows.length:0;}
-function byComp(rows,cid){if(!rows||!cid)return[];return rows.filter(r=>r.COMPONENT_ID===cid);}
+function byComp(rows,cid){if(!rows||!cid)return[];const c=String(cid).trim();return rows.filter(r=>String(r.COMPONENT_ID||'').trim()===c);}
 function allZero(rows,k){return rows.every(r=>(Number(r[k])||0)===0);}
 function isFlatLine(rows,k){if(!rows.length)return false;const f=Number(rows[0][k]);return rows.every(r=>Number(r[k])===f);}
 
@@ -525,7 +537,7 @@ function renderComp(cid){
   document.querySelectorAll('.cc.stalled,.cc.frozen-data,.cc.deadlock').forEach(el=>el.classList.remove('stalled','frozen-data','deadlock'));
 
   const A=byComp(DATA.A,cid),B=byComp(DATA.B,cid),C=byComp(DATA.C,cid);
-  const D=DATA.D?DATA.D.filter(r=>r.COMPONENT_ID===cid):[],E=byComp(DATA.E,cid);
+  const D=DATA.D?byComp(DATA.D,cid):[],E=byComp(DATA.E,cid);
 
   const base=A.length?A:B.length?B:C.length?C:[];
   const tsFirst=base.length?base[0].TIMESTAMP:'--';
@@ -916,7 +928,7 @@ function renderComp(cid){
       ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true});
     }
     if(B.length)ds.push({label:'PIPE_ACTIVE (pipeline)',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'});
-    mkLine('ch-layer',fl,ds);
+    mkLine('ch-layer',fl,ds,null,{maintainAspectRatio:false});
   }
 
   if(B.length){
@@ -924,13 +936,13 @@ function renderComp(cid){
     mkLine('ch-q',bl,[
       {label:'Q_FILLED',data:B.map(r=>Number(r.Q_FILLED)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'Q_PCT %',data:B.map(r=>(Number(r.Q_PCT)||0)*100),borderColor:'#ff4757',yAxisID:'y2'},
-    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}});
+    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{maintainAspectRatio:false});
     mkLine('ch-pipe',bl,[
       {label:'CLIENTS',data:B.map(r=>Number(r.CLIENTS)||0),borderColor:'#00c875'},
       {label:'PIPE_ACTIVE',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'},
       {label:'RETRY',data:B.map(r=>Number(r.RETRY)||0),borderColor:'#ffb830'},
       {label:'MODULES',data:B.map(r=>Number(r.MODULES)||0),borderColor:'#7c5cfc',borderDash:[4,3]},
-    ]);
+    ],null,{maintainAspectRatio:false});
   }
 
   if(C.length){
@@ -984,9 +996,15 @@ function renderComp(cid){
     }
   }
 
-  // INPUT TABLE
+  // INPUT TABLE — D is per component tab; extractor only emits inputs with histogram.count>0 (see elastic-agent-perf.sh)
+  const inpSec=document.getElementById('sec-inp');
+  const inpBody=document.getElementById('inp-body');
+  const inpHint=document.getElementById('inp-empty-hint');
+  const inpEmptyText=document.getElementById('inp-empty-text');
   if(D.length){
-    document.getElementById('sec-inp').style.display='';
+    inpSec.style.display='';
+    inpBody.style.display='';
+    inpHint.style.display='none';
     const ids=[...new Set(D.map(r=>r.INPUT_ID))];
     const lasts=ids.map(id=>D.filter(r=>r.INPUT_ID===id).pop());
     mkBar('ch-ibar',lasts.map(r=>{const id=String(r.INPUT_ID||'');return id.length>28?'\u2026'+id.slice(-22):id;}),[
@@ -994,7 +1012,7 @@ function renderComp(cid){
       {label:'P95_ms',data:lasts.map(r=>Number(r.P95_ms)||0),backgroundColor:'rgba(124,92,252,.65)'},
       {label:'P99_ms',data:lasts.map(r=>Number(r.P99_ms)||0),backgroundColor:'rgba(255,184,48,.65)'},
       {label:'MAX_ms',data:lasts.map(r=>Number(r.MAX_ms)||0),backgroundColor:'rgba(255,71,87,.65)'},
-    ]);
+    ],{maintainAspectRatio:false});
     const tbody=document.getElementById('itbody');tbody.innerHTML='';
     ids.forEach(id=>{
       const rows=D.filter(r=>r.INPUT_ID===id);
@@ -1017,7 +1035,24 @@ function renderComp(cid){
         <td>${r.STDDEV_ms}</td><td><span class="pill ${pc}">${pt}</span></td>`;
       tbody.appendChild(tr);
     });
-  }else document.getElementById('sec-inp').style.display='none';
+  }else{
+    if(CHARTS['ch-ibar']){CHARTS['ch-ibar'].destroy();delete CHARTS['ch-ibar'];}
+    document.getElementById('itbody').innerHTML='';
+    if(DATA.D&&DATA.D.length){
+      inpSec.style.display='';
+      inpBody.style.display='none';
+      inpHint.style.display='';
+      const cTab=String(cid).trim();
+      const compsWithD=new Set(DATA.D.map(r=>String(r.COMPONENT_ID||'').trim()));
+      const hasOther=[...compsWithD].some(c=>c!==cTab);
+      inpEmptyText.innerHTML=hasOther
+        ?'Table D is scoped to the <b>selected component</b> (tabs at the top). This component has no per-input rows, but other component IDs do appear in <code>D-input-processing.tsv</code> &mdash; switch tabs to see their charts and table.'
+        :'The extractor (<code>elastic-agent-perf.sh</code>, Table D) only writes rows when <code>monitoring.dataset.&lt;input&gt;.processing_time.histogram.count &gt; 0</code> in the diagnostic NDJSON. Inputs that were idle for the whole capture, or integrations that do not publish this histogram, never appear. If you expected multiple inputs on <i>this</i> component, only the ones that actually processed events during the window are listed.';
+    }else{
+      inpSec.style.display='none';
+      inpHint.style.display='none';
+    }
+  }
 }
 </script>
 </body>
