@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elastic Agent · Metrics Analyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#0a0c0f;--surf:#111418;--surf2:#181c22;--bdr:#232830;--bdr2:#2e3540;--text:#c8d0db;--dim:#5a6478;--mid:#8a96a8;--accent:#0099cc;--ok:#00c875;--warn:#ffb830;--err:#ff4757;--crit:#ff2d55;--info:#7ec8e3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.6}
+code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px;color:var(--info)}
+header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,12,15,.96);backdrop-filter:blur(8px);z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,#00d4ff,#7c5cfc);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.logo-name{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em}
+.logo-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+#hdr-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bdr2);color:var(--dim)}
+#pg-upload{max-width:700px;margin:60px auto;padding:0 28px}
+.upload-h{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;margin-bottom:8px}
+.upload-sub{color:var(--mid);font-size:13px;line-height:1.9;margin-bottom:36px}
+.dropzone{border:2px dashed var(--bdr2);border-radius:10px;padding:44px 28px;text-align:center;cursor:pointer;transition:.15s;background:var(--surf);margin-bottom:16px;user-select:none}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--surf2)}
+.dz-icon{font-size:38px;margin-bottom:12px}
+.dz-title{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;margin-bottom:6px}
+.dz-hint{font-size:12px;color:var(--mid);line-height:1.9}
+#file-input{display:none}
+.fgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+.fs{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:9px 11px;opacity:.4;transition:.15s}
+.fs.ok{border-color:var(--ok);background:rgba(0,200,117,.06);opacity:1}
+.fs-key{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.fs-name{font-size:10px;color:var(--mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs.ok .fs-name{color:var(--ok)}
+.go-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),#7c5cfc);border:none;border-radius:8px;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:opacity .15s}
+.go-btn:disabled{opacity:.25;cursor:not-allowed}
+.go-btn:not(:disabled):hover{opacity:.88}
+#pg-dash{display:none;padding:22px 28px 80px}
+.dash-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:20px}
+.dash-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);line-height:2}
+.dash-meta b{color:var(--mid);font-weight:500}
+.dash-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.comp-tabs{display:flex;gap:7px;flex-wrap:wrap}
+.ctab{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border-radius:4px;border:1px solid var(--bdr2);background:transparent;color:var(--dim);cursor:pointer;transition:.12s}
+.ctab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ctab:hover:not(.on){border-color:var(--accent);color:var(--text)}
+.reload-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--bdr2);border-radius:4px;color:var(--dim);cursor:pointer}
+.reload-btn:hover{border-color:var(--accent);color:var(--text)}
+#stall-banner{display:none;border-radius:8px;padding:16px 20px;margin-bottom:18px;border:1px solid}
+#stall-banner.mode-input{background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.4)}
+#stall-banner.mode-pipeline{background:rgba(255,71,87,.07);border-color:rgba(255,71,87,.4)}
+#stall-banner.mode-deadlock{background:rgba(255,71,87,.1);border-color:rgba(255,71,87,.6)}
+.sb-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;margin-bottom:6px}
+.sb-title.mode-input{color:var(--crit)}
+.sb-title.mode-pipeline{color:var(--err)}
+.sb-title.mode-deadlock{color:var(--err)}
+.sb-body{font-size:12px;color:var(--mid);line-height:1.8;font-family:'IBM Plex Mono',monospace}
+#flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px}
+.flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.flow-row{display:flex;align-items:center;flex-wrap:nowrap}
+.flow-node{display:flex;flex-direction:column;align-items:center;min-width:90px}
+.fn-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.fn-val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500}
+.fn-sub{font-size:10px;color:var(--dim);margin-top:2px}
+.fn-val.ok{color:var(--ok)} .fn-val.warn{color:var(--warn)} .fn-val.err{color:var(--err)} .fn-val.crit{color:var(--crit)} .fn-val.dim{color:var(--dim)}
+.flow-arrow{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 4px;min-width:44px}
+.fa-line{width:100%;height:2px;background:var(--bdr2)}
+.fa-line.blocked{background:var(--crit)}
+.fa-line.flowing{background:var(--ok)}
+.fa-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);margin-top:3px;white-space:nowrap}
+.fa-label.blocked{color:var(--crit)}
+.fa-label.flowing{color:var(--ok)}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:20px}
+.hc{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;text-align:center}
+.hc-icon{font-size:18px;margin-bottom:4px}
+.hc-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.hc.ok{border-color:rgba(0,200,117,.3);background:rgba(0,200,117,.05)}
+.hc.warn{border-color:rgba(255,184,48,.3);background:rgba(255,184,48,.05)}
+.hc.err{border-color:rgba(255,71,87,.3);background:rgba(255,71,87,.05)}
+.hc.crit{border-color:rgba(255,45,85,.4);background:rgba(255,45,85,.07)}
+#alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:22px}
+.al{display:flex;gap:11px;padding:11px 15px;border-radius:6px;border-left:3px solid;font-size:13px}
+.al.crit{background:rgba(255,45,85,.07);border-color:var(--crit)}
+.al.error{background:rgba(255,71,87,.07);border-color:var(--err)}
+.al.warn{background:rgba(255,184,48,.07);border-color:var(--warn)}
+.al.ok{background:rgba(0,200,117,.07);border-color:var(--ok)}
+.al.info{background:rgba(0,212,255,.05);border-color:var(--accent)}
+.al-ico{font-size:15px;flex-shrink:0;padding-top:1px}
+.al-title{font-weight:600;margin-bottom:1px}
+.al.crit .al-title{color:var(--crit)} .al.error .al-title{color:var(--err)}
+.al.warn .al-title{color:var(--warn)} .al.ok .al-title{color:var(--ok)}
+.al.info .al-title{color:var(--info)}
+.al-body{font-size:12px;color:var(--mid);font-family:'IBM Plex Mono',monospace}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:22px}
+.sc{background:var(--surf);border:1px solid var(--bdr);border-radius:7px;padding:13px 15px}
+.sc.sw{border-color:rgba(255,184,48,.35);background:rgba(255,184,48,.04)}
+.sc.se{border-color:rgba(255,71,87,.35);background:rgba(255,71,87,.04)}
+.sc.sf{border-color:rgba(255,45,85,.45);background:rgba(255,45,85,.06)}
+.sc.si{border-color:rgba(0,212,255,.2);background:rgba(0,212,255,.03)}
+.sc-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.sc-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;line-height:1;margin-bottom:3px}
+.sc-val.ok{color:var(--ok)} .sc-val.warn{color:var(--warn)} .sc-val.err{color:var(--err)} .sc-val.crit{color:var(--crit)} .sc-val.na{color:var(--dim);font-size:16px}
+.sc-sub{font-size:11px;color:var(--dim)}
+.badge{font-size:8px;font-family:'IBM Plex Mono',monospace;padding:1px 5px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
+.badge.hist{background:rgba(0,212,255,.12);color:var(--info)}
+.badge.stall{background:rgba(255,45,85,.15);color:var(--crit)}
+/* Stat card tooltips */
+.sc{position:relative;cursor:default}
+.sc-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:260px;background:#1e2530;border:1px solid var(--bdr2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--mid);line-height:1.6;font-family:'IBM Plex Mono',monospace;z-index:200;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.sc-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1e2530}
+.sc:hover .sc-tip{display:block}
+/* Collapsible alert group */
+.al-group{margin-bottom:7px}
+.al-group-hd{display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:6px;border-left:3px solid;cursor:pointer;user-select:none;font-size:13px}
+.al-group-hd:hover{filter:brightness(1.1)}
+.al-group-hd.crit {background:rgba(255,45,85,.07);border-color:var(--crit)}
+.al-group-hd.error{background:rgba(255,71,87,.07);border-color:var(--err)}
+.al-group-hd.warn {background:rgba(255,184,48,.07);border-color:var(--warn)}
+.al-group-hd.info {background:rgba(0,212,255,.05);border-color:var(--accent)}
+.al-group-hd.ok   {background:rgba(0,200,117,.07);border-color:var(--ok)}
+.al-group-title{flex:1;font-weight:600}
+.al-group-hd.crit  .al-group-title{color:var(--crit)}
+.al-group-hd.error .al-group-title{color:var(--err)}
+.al-group-hd.warn  .al-group-title{color:var(--warn)}
+.al-group-hd.info  .al-group-title{color:var(--info)}
+.al-group-hd.ok    .al-group-title{color:var(--ok)}
+.al-group-count{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:10px;color:var(--mid)}
+.al-group-chevron{font-size:10px;color:var(--dim);transition:transform .2s}
+.al-group-hd.open .al-group-chevron{transform:rotate(180deg)}
+.al-group-body{display:none;padding:2px 0 0 0}
+.al-group-body.open{display:block}
+.al-group-body .al{border-radius:0;border-left-width:2px;margin-bottom:1px}
+.al-group-body .al:first-child{border-radius:0 0 0 0}
+.al-group-body .al:last-child{border-radius:0 0 4px 4px}
+.sec{margin-bottom:26px}
+.sec-hd{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:11px;display:flex;align-items:center;gap:9px}
+.sec-hd::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:12px}
+.cc{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 16px 13px}
+.cc.full{grid-column:1/-1}
+.cc.stalled{border-color:rgba(255,45,85,.25)}
+.cc.stalled .cc-title::after{content:' \2014 ALL ZERO';font-size:9px;font-weight:400;color:var(--crit);letter-spacing:.06em}
+.cc.frozen-data .cc-sub::before{content:'\26A0 frozen reservoir \2014 values from before this window  \B7  ';color:rgba(255,184,48,.7)}
+.cc.deadlock{border-color:rgba(255,71,87,.4);background:rgba(255,71,87,.03)}
+.cc-title{font-size:12px;font-weight:600;color:var(--mid);margin-bottom:2px}
+.cc-sub{font-size:10px;color:var(--dim);margin-bottom:13px;font-family:'IBM Plex Mono',monospace}
+.tscroll{overflow-x:auto}
+table.itbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
+table.itbl th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:7px 9px;border-bottom:1px solid var(--bdr);font-weight:600}
+table.itbl td{padding:9px 9px;border-bottom:1px solid var(--bdr);color:var(--mid)}
+table.itbl tr:last-child td{border-bottom:none}
+table.itbl tr:hover td{background:var(--surf2)}
+.pill{display:inline-block;padding:2px 7px;border-radius:9px;font-size:9px;font-weight:600;letter-spacing:.04em}
+.pill.ok{background:rgba(0,200,117,.15);color:var(--ok)}
+.pill.warn{background:rgba(255,184,48,.15);color:var(--warn)}
+.pill.err{background:rgba(255,71,87,.15);color:var(--err)}
+.pill.crit{background:rgba(255,45,85,.15);color:var(--crit)}
+.pill.frozen{background:rgba(80,90,110,.25);color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">&#9889;</div>
+    <div><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Metrics Analyzer</div></div>
+  </div>
+  <div id="hdr-status">no data loaded</div>
+</header>
+
+<div id="pg-upload">
+  <div class="upload-h">Load diagnostic output</div>
+  <p class="upload-sub">
+    Drop the <code>perf-analysis-*</code> folder from <code>elastic-agent-perf.sh</code>, or click to pick files.<br>
+    Auto-detected by prefix: <code>A-output-health</code> &middot; <code>B-pipeline-queue</code> &middot; <code>C-beat-resources</code> &middot; <code>D-input-processing</code> &middot; <code>E-health-ratios</code>
+  </p>
+  <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+    <div class="dz-icon">&#128194;</div>
+    <div class="dz-title">Drop the perf-analysis folder here</div>
+    <div class="dz-hint">Or click to browse files. Any subset of A&ndash;E works &mdash; missing tables are skipped gracefully.</div>
+  </div>
+  <input type="file" id="file-input" multiple accept=".tsv,.txt" onchange="loadFiles(this.files)">
+  <div class="fgrid">
+    <div class="fs" id="fs-A"><div class="fs-key">A &middot; Output</div><div class="fs-name">not loaded</div></div>
+    <div class="fs" id="fs-B"><div class="fs-key">B &middot; Pipeline</div><div class="fs-name">not loaded</div></div>
+    <div class="fs" id="fs-C"><div class="fs-key">C &middot; Resources</div><div class="fs-name">not loaded</div></div>
+    <div class="fs" id="fs-D"><div class="fs-key">D &middot; Inputs</div><div class="fs-name">not loaded</div></div>
+    <div class="fs" id="fs-E"><div class="fs-key">E &middot; Ratios</div><div class="fs-name">not loaded</div></div>
+  </div>
+  <button class="go-btn" id="go-btn" disabled onclick="showDashboard()">Drop files to begin &#8594;</button>
+</div>
+
+<div id="pg-dash">
+  <div class="dash-top">
+    <div class="dash-meta">COMPONENT &nbsp;<b id="m-comp">&mdash;</b><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
+    <div class="dash-actions">
+      <div class="comp-tabs" id="comp-tabs"></div>
+      <button class="reload-btn" onclick="resetAll()">&#8617; reload</button>
+    </div>
+  </div>
+
+  <div id="stall-banner"><div class="sb-title" id="sb-title"></div><div class="sb-body" id="sb-body"></div></div>
+  <div id="flow-diagram"><div class="flow-title">Event flow &mdash; latest snapshot</div><div class="flow-row" id="flow-row"></div></div>
+  <div class="health-grid" id="health-grid"></div>
+  <div id="alerts"></div>
+
+  <div class="sec"><div class="sec-hd">Summary</div><div class="stat-row" id="stat-row"></div></div>
+
+  <div class="sec" id="sec-out">
+    <div class="sec-hd">Output Delivery</div>
+    <div class="cgrid">
+      <div class="cc" id="cc-events"><div class="cc-title">Events per interval</div><div class="cc-sub">ACKED / FAILED / DROPPED &mdash; 30s counter deltas</div><canvas id="ch-events" height="175"></canvas></div>
+      <div class="cc" id="cc-lat"><div class="cc-title">Write latency (ms)</div><div class="cc-sub">MEAN / P95 / P99 / P999 / MAX &mdash; lifetime reservoir</div><canvas id="ch-lat" height="175"></canvas></div>
+      <div class="cc" id="cc-io"><div class="cc-title">Network I/O (bytes/interval)</div><div class="cc-sub">WRITE_B / READ_B &mdash; 30s deltas</div><canvas id="ch-io" height="175"></canvas></div>
+      <div class="cc" id="cc-err"><div class="cc-title">Error rates (%)</div><div class="cc-sub">429_% / DROP_% / DUPE_% / RETRY_% per interval</div><canvas id="ch-err" height="175"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-flow">
+    <div class="sec-hd">Event flow by layer</div>
+    <div class="cgrid">
+      <div class="cc full" id="cc-layer">
+        <div class="cc-title">In-flight events per pipeline layer</div>
+        <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
+        <canvas id="ch-layer" height="175"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-pipe">
+    <div class="sec-hd">Pipeline &amp; Queue</div>
+    <div class="cgrid">
+      <div class="cc" id="cc-q"><div class="cc-title">Queue fill</div><div class="cc-sub">Q_FILLED events (left axis) &middot; Q_PCT % (right axis)</div><canvas id="ch-q" height="175"></canvas></div>
+      <div class="cc" id="cc-pipe"><div class="cc-title">Pipeline activity</div><div class="cc-sub">CLIENTS / PIPE_ACTIVE / RETRY / MODULES</div><canvas id="ch-pipe" height="175"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-res">
+    <div class="sec-hd">Beat Resources</div>
+    <div class="cgrid">
+      <div class="cc"><div class="cc-title">Memory (MB)</div><div class="cc-sub">MEM_ALLOC_MB (Go heap, oscillates with GC) / RSS_MB (OS resident)</div><canvas id="ch-mem" height="175"></canvas></div>
+      <div class="cc"><div class="cc-title">CPU time per interval (ms)</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30s deltas</div><canvas id="ch-cpu" height="175"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-inp" style="display:none">
+    <div class="sec-hd">Input Processing</div>
+    <div class="cgrid">
+      <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime snapshot (ms)</div><div class="cc-sub">Reservoir values reflect all-time history. Frozen count = no new events processed since beat started.</div><canvas id="ch-ibar" height="200"></canvas></div>
+    </div>
+    <div class="cc full" style="margin-top:12px">
+      <div class="cc-title" style="margin-bottom:2px">Input detail</div>
+      <div class="cc-sub">FROZEN = count identical across all intervals &middot; CRITICAL = p99&gt;30s &middot; all times in ms</div>
+      <div class="tscroll">
+        <table class="itbl">
+          <thead><tr><th>Input ID</th><th>Count</th><th>Mean</th><th>Median</th><th>P95</th><th>P99</th><th>Max</th><th>StdDev</th><th>Status</th></tr></thead>
+          <tbody id="itbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const DATA={A:null,B:null,C:null,D:null,E:null};
+const CHARTS={};
+const PREFIX_MAP={'A-output-health':'A','B-pipeline-queue':'B','C-beat-resources':'C','D-input-processing':'D','E-health-ratios':'E'};
+
+// PARSER — column -t uses spaces not tabs, split on 2+ spaces
+function parseTSV(text){
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const headers=lines[0].trim().split(/  +/).map(h=>h.trim()).filter(Boolean);
+  return lines.slice(1).map(line=>{
+    const vals=line.trim().split(/  +/);
+    const obj={};
+    headers.forEach((h,i)=>{const v=(vals[i]||'').trim();obj[h]=(v!==''&&!isNaN(v)&&v!=='.')?parseFloat(v):v;});
+    return obj;
+  });
+}
+
+function detectKey(fn){
+  const base=fn.split('/').pop().replace(/\.(tsv|txt)$/i,'');
+  for(const[p,k]of Object.entries(PREFIX_MAP))if(base===p||base.startsWith(p))return k;
+  return null;
+}
+
+function loadFiles(fl){
+  Array.from(fl).forEach(f=>{
+    const key=detectKey(f.name); if(!key)return;
+    const r=new FileReader();
+    r.onload=e=>{DATA[key]=parseTSV(e.target.result);const s=document.getElementById('fs-'+key);s.classList.add('ok');s.querySelector('.fs-name').textContent=f.name.split('/').pop();refreshBtn();};
+    r.readAsText(f);
+  });
+}
+
+function refreshBtn(){
+  const n=Object.values(DATA).filter(Boolean).length;
+  const b=document.getElementById('go-btn');
+  b.disabled=n===0;
+  b.textContent=n===0?'Drop files to begin \u2192':n<5?`Analyze \u2014 ${n}/5 files \u2192`:'Analyze \u2192';
+  document.getElementById('hdr-status').textContent=n+'/5 files';
+}
+
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{
+  e.preventDefault();dz.classList.remove('over');
+  const dt=e.dataTransfer;
+  if(dt.items&&dt.items[0]&&dt.items[0].webkitGetAsEntry){
+    const col=[];let pend=0;
+    function re(entry){
+      if(entry.isFile){pend++;entry.file(f=>{col.push(f);if(!--pend)loadFiles(col);});}
+      else if(entry.isDirectory)entry.createReader().readEntries(es=>es.forEach(re));
+    }
+    for(let i=0;i<dt.items.length;i++){const e2=dt.items[i].webkitGetAsEntry();if(e2)re(e2);}
+  }else loadFiles(dt.files);
+});
+
+// CHART DEFAULTS
+Chart.defaults.color='#5a6478';Chart.defaults.borderColor='#1a1e25';
+Chart.defaults.font.family="'IBM Plex Mono',monospace";Chart.defaults.font.size=10;
+Chart.defaults.plugins.legend.labels.boxWidth=10;Chart.defaults.plugins.legend.labels.padding=14;
+Chart.defaults.elements.point.radius=0;Chart.defaults.elements.point.hoverRadius=4;
+Chart.defaults.elements.line.tension=0.3;Chart.defaults.elements.line.borderWidth=1.5;
+Chart.defaults.plugins.tooltip.backgroundColor='#181c22';Chart.defaults.plugins.tooltip.borderColor='#2e3540';
+Chart.defaults.plugins.tooltip.borderWidth=1;Chart.defaults.plugins.tooltip.titleColor='#c8d0db';
+Chart.defaults.plugins.tooltip.bodyColor='#8a96a8';Chart.defaults.plugins.tooltip.padding=10;
+
+function mkLine(id,labels,datasets,extraScales){
+  if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
+  const el=document.getElementById(id);if(!el)return;
+  CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+    scales:{x:{ticks:{maxTicksLimit:8,maxRotation:0},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}},...(extraScales||{})},
+    plugins:{legend:{display:datasets.length>1}}
+  }});
+}
+
+function mkBar(id,labels,datasets){
+  if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
+  const el=document.getElementById(id);if(!el)return;
+  CHARTS[id]=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:true,interaction:{mode:'index',intersect:false},
+    scales:{x:{ticks:{maxTicksLimit:12,maxRotation:20},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:{maxTicksLimit:6}}},
+    plugins:{legend:{display:true}},elements:{bar:{borderRadius:3}}
+  }});
+}
+
+// HELPERS
+function thin(arr,n=60){if(arr.length<=n)return arr;const s=Math.ceil(arr.length/n);return arr.map((v,i)=>i%s===0?v:'');}
+function hhmm(ts){const m=String(ts||'').match(/T(\d{2}:\d{2})/);return m?m[1]:String(ts);}
+function fmt(n,dp=0){if(n==null||isNaN(n))return'--';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return Number(n).toFixed(dp);}
+function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
+function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
+function avgKey(rows,k){return rows.length?rows.reduce((s,r)=>s+(Number(r[k])||0),0)/rows.length:0;}
+function byComp(rows,cid){if(!rows||!cid)return[];return rows.filter(r=>r.COMPONENT_ID===cid);}
+function allZero(rows,k){return rows.every(r=>(Number(r[k])||0)===0);}
+function isFlatLine(rows,k){if(!rows.length)return false;const f=Number(rows[0][k]);return rows.every(r=>Number(r[k])===f);}
+
+// STAT CARD TOOLTIPS
+const STAT_TIPS = {
+  'Total Acked':   'Events successfully delivered to and acknowledged by the output (ES/Logstash). 30s counter delta. Zero here = nothing shipped during this entire window.',
+  'Success Rate':  'Acked / (Acked + Failed + Dropped). N/A when no events were attempted &mdash; not the same as 100% success.',
+  'Failed':        'Output-side delivery failures that will be retried. Non-zero = output is struggling but events are not yet lost.',
+  'Dropped':       'Events that exceeded the max retry count or were discarded. These are permanently lost. Any non-zero value is serious.',
+  'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). If this is non-zero while ACKED=0 = output worker deadlock. Stays 0 during input-layer stalls.',
+  'Lat P99':       'Write latency 99th percentile &mdash; lifetime reservoir, not a per-window delta. Flat line = stalled beat, reservoir not updated. &gt;3s = elevated, &gt;10s = critical.',
+  'Lat P999':      'Write latency 99.9th percentile. Large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates ES is hanging on a small fraction of bulk requests.',
+  'Queue Peak':    'Highest queue fill % seen this window. Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = inputs are silent, not that output is fast.',
+  'Retries':       'pipeline.events.retry total. Events re-entered the pipeline due to output failures. High retries + low drops = output struggling but recovering.',
+  'RSS':           'Resident Set Size &mdash; OS physical memory used by the beat process. Sustained growth (&gt;50MB per window) may indicate a memory leak.',
+  'Go Heap':       'Range of Go heap allocation in this window. Oscillation (e.g. 35&ndash;74 MB) is normal GC behavior. Monotonic growth without release = potential leak.',
+  'Uptime':        'Beat process uptime in hours. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
+  'Goroutines':    'Active Go goroutines. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
+  'Version':       'Beat version from monitoring metrics.',
+};
+
+function mkAlert(level,title,body,container){
+  const ico={crit:'&#128308;',error:'&#128992;',warn:'&#128993;',ok:'&#128994;',info:'&#128998;'};
+  const d=document.createElement('div');d.className='al '+level;
+  d.innerHTML=`<span class="al-ico">${ico[level]||'&#9679;'}</span><div><div class="al-title">${title}</div><div class="al-body">${body}</div></div>`;
+  (container||document.getElementById('alerts')).appendChild(d);
+}
+
+// mkAlertGroup — creates a collapsible group header that wraps multiple alerts
+// Returns the body element to append child alerts into
+function mkAlertGroup(level,title,items,openByDefault){
+  const ico={crit:'&#128308;',error:'&#128992;',warn:'&#128993;',ok:'&#128994;',info:'&#128998;'};
+  const wrap=document.createElement('div');wrap.className='al-group';
+  const hd=document.createElement('div');hd.className='al-group-hd '+level+(openByDefault?' open':'');
+  hd.innerHTML=`<span class="al-ico">${ico[level]||'&#9679;'}</span><div class="al-group-title">${title}</div><span class="al-group-count">${items}</span><span class="al-group-chevron">&#9660;</span>`;
+  const body=document.createElement('div');body.className='al-group-body'+(openByDefault?' open':'');
+  hd.onclick=()=>{hd.classList.toggle('open');body.classList.toggle('open');};
+  wrap.appendChild(hd);wrap.appendChild(body);
+  document.getElementById('alerts').appendChild(wrap);
+  return body;
+}
+
+function mkStat(label,val,sub,valCls,cardCls,badge){
+  const d=document.createElement('div');d.className='sc '+(cardCls||'');
+  const bh=badge?`<span class="badge ${badge.cls}">${badge.text}</span>`:'';
+  const tip=STAT_TIPS[label]?`<div class="sc-tip">${STAT_TIPS[label]}</div>`:'';
+  d.innerHTML=`<div class="sc-label">${label}${bh}</div><div class="sc-val ${valCls||''}">${val}</div><div class="sc-sub">${sub}</div>${tip}`;
+  document.getElementById('stat-row').appendChild(d);
+}
+
+function mkHealth(icon,label,cls){
+  const d=document.createElement('div');d.className='hc '+cls;
+  d.innerHTML=`<div class="hc-icon">${icon}</div><div class="hc-label">${label}</div>`;
+  document.getElementById('health-grid').appendChild(d);
+}
+
+function markCard(id,type){
+  const c=document.getElementById(id);if(!c)return;
+  if(type==='stalled')c.classList.add('stalled');
+  if(type==='frozen')c.classList.add('frozen-data');
+  if(type==='deadlock')c.classList.add('deadlock');
+}
+
+// STALL LAYER DETECTION
+// Returns: 'deadlock' | 'pipeline' | 'input' | null
+function diagnoseLayer(A,B){
+  if(!A.length&&!B.length)return null;
+  if(sumKey(A,'ACKED')>0||sumKey(A,'FAILED')>0)return null;
+  const outAct=avgKey(A,'OUT_ACTIVE');
+  const pipeAct=B.length?avgKey(B,'PIPE_ACTIVE'):0;
+  const qPct=B.length?maxKey(B,'Q_PCT'):0;
+  if(outAct>0&&qPct>=0.8)return'deadlock';
+  if(pipeAct>0&&outAct===0)return'pipeline';
+  return'input';
+}
+
+function resetAll(){
+  Object.keys(DATA).forEach(k=>DATA[k]=null);
+  ['A','B','C','D','E'].forEach(k=>{const s=document.getElementById('fs-'+k);s.classList.remove('ok');s.querySelector('.fs-name').textContent='not loaded';});
+  document.getElementById('file-input').value='';
+  Object.values(CHARTS).forEach(c=>{try{c.destroy();}catch(e){}});
+  Object.keys(CHARTS).forEach(k=>delete CHARTS[k]);
+  document.getElementById('pg-dash').style.display='none';
+  document.getElementById('pg-upload').style.display='block';
+  document.getElementById('hdr-status').textContent='no data loaded';
+  document.getElementById('go-btn').disabled=true;
+  document.getElementById('go-btn').textContent='Drop files to begin \u2192';
+}
+
+function showDashboard(){
+  document.getElementById('pg-upload').style.display='none';
+  document.getElementById('pg-dash').style.display='block';
+  const cs=new Set();
+  Object.values(DATA).forEach(rows=>{if(rows)rows.forEach(r=>{if(r.COMPONENT_ID)cs.add(r.COMPONENT_ID);});});
+  const comps=[...cs];
+  const te=document.getElementById('comp-tabs');te.innerHTML='';
+  comps.forEach((cid,i)=>{
+    const b=document.createElement('button');b.className='ctab'+(i===0?' on':'');
+    b.textContent=cid.length>32?'\u2026'+cid.slice(-26):cid;b.title=cid;
+    b.onclick=()=>{te.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderComp(cid);};
+    te.appendChild(b);
+  });
+  if(comps.length>0)renderComp(comps[0]);
+  else{document.getElementById('alerts').innerHTML='';mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');}
+}
+
+function renderComp(cid){
+  document.getElementById('alerts').innerHTML='';
+  document.getElementById('stat-row').innerHTML='';
+  document.getElementById('health-grid').innerHTML='';
+  document.getElementById('flow-row').innerHTML='';
+  document.querySelectorAll('.cc.stalled,.cc.frozen-data,.cc.deadlock').forEach(el=>el.classList.remove('stalled','frozen-data','deadlock'));
+
+  const A=byComp(DATA.A,cid),B=byComp(DATA.B,cid),C=byComp(DATA.C,cid);
+  const D=DATA.D?DATA.D.filter(r=>r.COMPONENT_ID===cid):[],E=byComp(DATA.E,cid);
+
+  const base=A.length?A:B.length?B:C.length?C:[];
+  const tsFirst=base.length?base[0].TIMESTAMP:'--';
+  const tsLast=base.length?base[base.length-1].TIMESTAMP:'--';
+  const labels=thin(base.map(r=>hhmm(r.TIMESTAMP)));
+
+  document.getElementById('m-comp').textContent=cid;
+  document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
+  document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmt(base.length*30/60,0)+' min)';
+  document.getElementById('hdr-status').textContent='\u2026'+cid.slice(-22);
+
+  const totAck=sumKey(A,'ACKED'),totFail=sumKey(A,'FAILED');
+  const isStalled=A.length>5&&totAck===0&&totFail===0;
+  const stallLayer=isStalled?diagnoseLayer(A,B):null;
+
+  const lastA=A.length?A[A.length-1]:{},lastB=B.length?B[B.length-1]:{};
+  const fbAct=Number(lastA.FB_ACTIVE||0);
+  const outAct=Number(lastA.OUT_ACTIVE||0);
+  const pipeAct=Number(lastB.PIPE_ACTIVE||0);
+  const qFill=Number(lastB.Q_FILLED||0),qMax=Number(lastB.Q_MAX||3200),qPct=Number(lastB.Q_PCT||0);
+
+  // STALL BANNER
+  const banner=document.getElementById('stall-banner');
+  const sbTitle=document.getElementById('sb-title'),sbBody=document.getElementById('sb-body');
+  if(isStalled&&stallLayer){
+    banner.style.display='block';banner.className='';
+    const beatH=C.length?fmt((Number(C[0].UPTIME_s)||0)/3600,1):'?';
+    const winMin=fmt(A.length*30/60,0);
+    if(stallLayer==='deadlock'){
+      banner.classList.add('mode-deadlock');sbTitle.className='sb-title mode-deadlock';
+      sbTitle.innerHTML='&#128308; OUTPUT WORKER DEADLOCK \u2014 events sent but not acknowledged';
+      sbBody.innerHTML='OUT_ACTIVE='+fmt(outAct)+' events in-flight for ~'+winMin+' min with ACKED=0. Queue '+Math.round(qPct*100)+'% full ('+qFill+'/'+qMax+'). ES not responding within write timeout.<br>'+'Check: /_cat/thread_pool/write, bulk queue depth, circuit breakers, ILM rollover blocking.';
+    }else if(stallLayer==='pipeline'){
+      banner.classList.add('mode-pipeline');sbTitle.className='sb-title mode-pipeline';
+      sbTitle.innerHTML='&#128308; PIPELINE\u2192OUTPUT STALL \u2014 events queued but not reaching output';
+      sbBody.innerHTML='PIPE_ACTIVE='+fmt(pipeAct)+' events in pipeline, OUT_ACTIVE=0, ACKED=0 for ~'+winMin+' min.<br>Output worker is not consuming from the queue. Check output configuration and connection to ES/Logstash.';
+    }else{
+      banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
+      sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 beat alive but no events entering pipeline';
+      sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+(B.length&&Number(lastB.CLIENTS||0)===0?'pipeline.clients=0 \u2014 inputs never opened a pipeline connection. ':'')+
+      'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.';
+    }
+  }else banner.style.display='none';
+
+  // PIPELINE FLOW DIAGRAM
+  const fd=document.getElementById('flow-diagram');
+  if(A.length||B.length){
+    fd.style.display='block';
+    const row=document.getElementById('flow-row');
+    function fv(n,t1,t2){if(n===0)return{v:fmt(n),c:'dim'};if(n>=t2)return{v:fmt(n),c:'crit'};if(n>=t1)return{v:fmt(n),c:'warn'};return{v:fmt(n),c:'ok'};}
+    const fbV=fv(fbAct,1000,5000);
+    const qV={v:fmt(qFill)+(qMax?'/'+fmt(qMax):''),c:qPct>=1?'crit':qPct>=0.8?'warn':qPct>0?'ok':'dim'};
+    const oV=fv(outAct,100,3000);
+    const ackV={v:fmt(totAck),c:totAck>0?'ok':'crit'};
+    const a1Cls=stallLayer==='input'?'blocked':fbAct>0?'flowing':'';
+    const a2Cls=stallLayer==='pipeline'?'blocked':pipeAct>0?'flowing':'';
+    const a3Cls=stallLayer==='deadlock'?'blocked':outAct>0?'flowing':'';
+    row.innerHTML=`
+      <div class="flow-node"><div class="fn-label">Input buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">FB_ACTIVE</div></div>
+      <div class="flow-arrow"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1Cls==='blocked'?'&#10006; blocked':a1Cls==='flowing'?'&#10004;':''}</div></div>
+      <div class="flow-node"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${Math.round(qPct*100)}% full</div></div>
+      <div class="flow-arrow"><div class="fa-line ${a2Cls}"></div><div class="fa-label ${a2Cls}">${a2Cls==='blocked'?'&#10006; blocked':a2Cls==='flowing'?'&#10004;':''}</div></div>
+      <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">OUT_ACTIVE</div></div>
+      <div class="flow-arrow"><div class="fa-line ${a3Cls}"></div><div class="fa-label ${a3Cls}">${a3Cls==='blocked'?'&#10006; ES not acking':a3Cls==='flowing'?'&#10004;':''}</div></div>
+      <div class="flow-node"><div class="fn-label">Acked</div><div class="fn-val ${ackV.c}">${ackV.v}</div><div class="fn-sub">this window</div></div>`;
+  }else fd.style.display='none';
+
+  // HEALTH GRID
+  if(A.length)mkHealth(totAck>0?'&#9989;':'&#10060;','Throughput',totAck>0?'ok':'crit');
+  if(B.length){
+    mkHealth(qPct>=1?'&#128308;':qPct>=0.8?'&#128993;':'&#9989;','Queue',qPct>=1?'crit':qPct>=0.8?'warn':'ok');
+    mkHealth(Number(lastB.CLIENTS||0)===0?'&#10060;':'&#9989;','Pipeline',Number(lastB.CLIENTS||0)===0?'crit':'ok');
+  }
+  if(A.length)mkHealth(outAct>0&&totAck===0&&A.length>5?'&#128308;':'&#9989;','Output',outAct>0&&totAck===0&&A.length>5?'crit':'ok');
+  if(C.length){
+    const rss=C.map(r=>Number(r.RSS_MB)||0).filter(v=>v>0);
+    mkHealth(rss.length>1&&rss[rss.length-1]-rss[0]>50?'&#128993;':'&#9989;','Memory',rss.length>1&&rss[rss.length-1]-rss[0]>50?'warn':'ok');
+    mkHealth('&#9989;','Goroutines','ok');
+  }
+  if(D.length){
+    const anyF=[...new Set(D.map(r=>r.INPUT_ID))].some(id=>{const cn=D.filter(r=>r.INPUT_ID===id).map(r=>Number(r.COUNT));return cn.length>5&&cn.every(c=>c===cn[0]);});
+    mkHealth(anyF?'&#128308;':'&#9989;','Inputs',anyF?'crit':'ok');
+  }
+
+  // ALERTS
+  // ─ Principle: stall banner already states the primary stall facts.
+  //   Alerts focus on actionable specifics not visible elsewhere.
+  //   Redundant info alerts are suppressed in favour of stat card badges/tooltips.
+  //   Related alerts are grouped under a collapsible header.
+
+  const critAlerts=[], warnAlerts=[], infoAlerts=[];
+
+  // ── OUTPUT / PIPELINE ISSUES ──────────────────────────
+  if(A.length){
+    // Deadlock: stall banner doesn't cover this mode, so keep the alert
+    if(isStalled&&stallLayer==='deadlock')
+      critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',
+        'OUT_ACTIVE='+fmt(outAct)+' sustained with ACKED=0 across ~'+fmt(A.length*30/60,0)+' min. '+
+        'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
+        '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.']);
+    // For input/pipeline stall: stall banner already covers this verbatim — suppress here.
+    // Only emit if banner is NOT shown (i.e. isStalled=false but acked=0 for other reasons).
+    if(!isStalled&&totAck===0&&totFail===0&&A.length>5)
+      critAlerts.push(['warn','Zero throughput for entire window','No events acked or failed. Beat may be starting up, or inputs have no data to process.']);
+
+    const p99p=maxKey(A,'LAT_P99'),p999p=maxKey(A,'LAT_P999');
+    const latFlat=isFlatLine(A,'LAT_P99');
+    if(!latFlat){
+      if(p999p>30000)
+        critAlerts.push(['error','Write latency p999='+fmt(p999p)+'ms \u2014 extreme tail',
+          'p999 exceeds 30s (p99='+fmt(p99p)+'ms, spread='+fmt(p999p-p99p)+'ms). A fraction of bulk requests are hanging for very long. '+
+          'Causes: ES bulk thread pool exhaustion, ILM rollover blocking, GC pauses. Check /_nodes/hot_threads.']);
+      else if(p99p>10000)
+        critAlerts.push(['error','Write latency p99='+fmt(p99p)+'ms','Exceeds 10s. p999='+fmt(p999p)+'ms. ES pressure or slow network.']);
+      else if(p99p>3000)
+        warnAlerts.push(['warn','Write latency p99='+fmt(p99p)+'ms (elevated)','Above 3s. p999='+fmt(p999p)+'ms.']);
+    }
+    // Frozen latency: already shown via HISTORICAL badge on stat cards and frozen-data chart subtitle — suppress alert.
+  }
+
+  if(B.length){
+    // pipeline.clients=0: stall banner already says this for input stalls — suppress duplication.
+    // Only emit if banner is NOT showing or mode is non-input.
+    const zeroCli=B.every(r=>(Number(r.CLIENTS)||0)===0);
+    if(zeroCli&&B.length>5&&(!isStalled||stallLayer!=='input'))
+      critAlerts.push(['crit','No pipeline clients \u2014 inputs never connected',
+        'pipeline.clients=0 across all '+B.length+' intervals. '+(Number(lastB.MODULES)||0)+' modules configured but none publishing.']);
+
+    const qFull=B.filter(r=>(Number(r.Q_PCT)||0)>=1).length;
+    if(qFull>B.length*0.5)
+      critAlerts.push(['error','Queue saturated \u2014 '+Math.round(qFull/B.length*100)+'% of intervals at 100%',
+        'Q_FILLED=Q_MAX in '+qFull+'/'+B.length+' windows. '+(stallLayer==='deadlock'?'Combined with OUT_ACTIVE>0 and ACKED=0: confirms output worker deadlock.':'Increase queue.mem.events or add output workers.')]);
+    else if(qFull>0)
+      warnAlerts.push(['warn','Queue hit 100% capacity '+qFull+' time(s)','Intermittent backpressure. Monitor for sustained saturation.']);
+
+    // Queue=0 during stall: already explained by Queue Peak card tooltip — suppress alert.
+
+    if(sumKey(B,'DROPPED')>0)
+      critAlerts.push(['error',fmt(sumKey(B,'DROPPED'))+' events permanently dropped by pipeline','Exceeded max retry limit or queue closed under load.']);
+  }
+
+  if(E.length){
+    if(maxKey(E,'429_%')>1)warnAlerts.push(['warn','429 rate peaked at '+maxKey(E,'429_%').toFixed(2)+'%','ES rate-limiting. Reduce bulk_max_size or add output workers.']);
+    if(maxKey(E,'RETRY_%')>5)warnAlerts.push(['warn','Retry rate peaked at '+maxKey(E,'RETRY_%').toFixed(2)+'%','High retry rate. Check ES indexing performance.']);
+  }
+
+  if(C.length>20){
+    const rss=C.map(r=>Number(r.RSS_MB)||0).filter(v=>v>0);
+    if(rss.length>1&&rss[rss.length-1]-rss[0]>50)
+      warnAlerts.push(['warn','RSS grew +'+(rss[rss.length-1]-rss[0]).toFixed(0)+'MB over window',rss[0].toFixed(0)+'MB \u2192 '+rss[rss.length-1].toFixed(0)+'MB. Possible memory leak if sustained across restarts.']);
+  }
+
+  // ── INPUT ISSUES ──────────────────────────────────────
+  if(D.length){
+    const ids=[...new Set(D.map(r=>r.INPUT_ID))];
+    const fh=[],fo=[],ho=[];
+    ids.forEach(iid=>{
+      const rows=D.filter(r=>r.INPUT_ID===iid);
+      const cn=rows.map(r=>Number(r.COUNT));
+      const frzn=cn.length>5&&cn.every(c=>c===cn[0]);
+      const p99=maxKey(rows,'P99_ms');
+      if(frzn&&p99>30000)fh.push({iid,count:cn[0],p99});
+      else if(frzn)fo.push({iid,count:cn[0]});
+      else if(p99>30000)ho.push({iid,p99});
+    });
+    if(fh.length)critAlerts.push(['error',fh.length+' input(s) stalled with high processing latency',
+      'Count frozen AND p99&gt;30s:<br>'+fh.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (count='+x.count+', p99='+x.p99+'ms)').join('<br>')]);
+    if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (count frozen)',
+      'Count unchanged across all intervals:<br>'+fo.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (count='+x.count+')').join('<br>')]);
+    ho.forEach(x=>critAlerts.push(['error','Input p99='+x.p99+'ms \u2014 '+x.iid.slice(-32),'Processing p99>30s.']));
+  }
+
+  // ── POSITIVE SIGNALS (collapsed by default) ──────────
+  if(isStalled&&C.length>20){
+    const uptF=Number(C[0].UPTIME_s)||0,uptL=Number(C[C.length-1].UPTIME_s)||0;
+    const goro=C.map(r=>Number(r.GOROUTINES)||0);
+    infoAlerts.push(['info','Beat process healthy \u2014 no crashes or restarts detected',
+      'Uptime incremented continuously '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h. '+
+      'Goroutines stable '+Math.min(...goro)+'\u2013'+Math.max(...goro)+'. '+
+      'This is a silent stall, not a crash \u2014 the issue is in the pipeline or output layer.']);
+  }
+
+  // ── RENDER ────────────────────────────────────────────
+  // Critical alerts: grouped if >1, otherwise flat
+  if(critAlerts.length===0&&warnAlerts.length===0){
+    mkAlert('ok','No issues detected','All monitored thresholds within normal range.');
+  } else {
+    if(critAlerts.length===1){
+      mkAlert(critAlerts[0][0],critAlerts[0][1],critAlerts[0][2]);
+    } else if(critAlerts.length>1){
+      // Leading alert shown flat (most prominent), rest grouped
+      mkAlert(critAlerts[0][0],critAlerts[0][1],critAlerts[0][2]);
+      if(critAlerts.length>1){
+        const topLevel=critAlerts.slice(1).some(a=>a[0]==='crit')?'crit':'error';
+        const grp=mkAlertGroup(topLevel,critAlerts.length-1+' more issue'+(critAlerts.length>2?'s':''),critAlerts.length-1+' items',false);
+        critAlerts.slice(1).forEach(a=>mkAlert(a[0],a[1],a[2],grp));
+      }
+    }
+    if(warnAlerts.length===1){
+      mkAlert(warnAlerts[0][0],warnAlerts[0][1],warnAlerts[0][2]);
+    } else if(warnAlerts.length>1){
+      const grp=mkAlertGroup('warn',warnAlerts.length+' warning'+(warnAlerts.length>1?'s':''),warnAlerts.length+' items',false);
+      warnAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
+    }
+  }
+  // Info/positive signals: always collapsed
+  if(infoAlerts.length>0){
+    const grp=mkAlertGroup('info','Process health &amp; context notes',infoAlerts.length+' items',false);
+    infoAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
+  }
+
+  // SUMMARY STATS
+  if(A.length){
+    const totDrop=sumKey(A,'DROPPED'),total=totAck+totFail+totDrop;
+    const pct=total>0?(totAck/total*100).toFixed(1)+'%':null;
+    const p99=maxKey(A,'LAT_P99'),p999=maxKey(A,'LAT_P999');
+    const latFlat=isFlatLine(A,'LAT_P99');
+    mkStat('Total Acked',fmt(totAck),'events delivered',totAck===0?'crit':'ok',totAck===0?'sf':'');
+    mkStat('Success Rate',pct||'N/A',pct?'of attempted':'no events attempted',pct?(parseFloat(pct)>=99?'ok':parseFloat(pct)>=95?'warn':'err'):'na',!pct?'sf':'');
+    mkStat('Failed',fmt(totFail),'retryable errors',totFail>0?'warn':'',totFail>0?'sw':'');
+    mkStat('Dropped',fmt(totDrop),'permanent losses',totDrop>0?'err':'',totDrop>0?'se':'');
+    const outAvg=avgKey(A,'OUT_ACTIVE');
+    mkStat('OUT_ACTIVE',fmt(outAvg,0),'avg in-flight to output',stallLayer==='deadlock'?'crit':outAvg>100?'warn':'',stallLayer==='deadlock'?'sf':'');
+    mkStat('Lat P99',p99>0?p99+'ms':'--',latFlat&&isStalled?'pre-stall snapshot':'write latency',p99>10000?'err':p99>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
+    mkStat('Lat P999',p999>0?p999+'ms':'--',latFlat&&isStalled?'pre-stall snapshot':'99.9th percentile',p999>30000?'crit':p999>10000?'err':p999>3000?'warn':'',latFlat&&isStalled?'si':'',latFlat&&isStalled?{cls:'hist',text:'HISTORICAL'}:null);
+  }
+  if(B.length){
+    const qp=(maxKey(B,'Q_PCT')*100).toFixed(0)+'%';
+    mkStat('Queue Peak',qp,isStalled&&qp==='0%'?'empty (inputs stalled)':'max fill',parseFloat(qp)>=100?'crit':parseFloat(qp)>=80?'warn':'',isStalled&&qp==='0%'?'si':'',isStalled&&qp==='0%'?{cls:'stall',text:'STALL'}:null);
+    mkStat('Retries',fmt(sumKey(B,'RETRY')),'pipeline retries',sumKey(B,'RETRY')>0?'warn':'');
+  }
+  if(C.length){
+    const last=C[C.length-1];
+    const rss=C.map(r=>Number(r.RSS_MB)||0).filter(v=>v>0);
+    const rssG=rss.length>1?(rss[rss.length-1]-rss[0]).toFixed(0):'0';
+    const allocR=Math.max(...C.map(r=>Number(r.MEM_ALLOC_MB)||0))-Math.min(...C.map(r=>Number(r.MEM_ALLOC_MB)||0));
+    mkStat('RSS',(Number(last.RSS_MB)||0).toFixed(0)+' MB','+'+rssG+'MB over window','');
+    mkStat('Go Heap',allocR.toFixed(0)+' MB swing','GC oscillation (healthy)','');
+    mkStat('Uptime',fmt((Number(last.UPTIME_s)||0)/3600,1)+'h','no restarts','ok');
+    mkStat('Goroutines',String(last.GOROUTINES||'--'),'runtime goroutines','');
+    mkStat('Version',String(last.VERSION||'--'),'beat version','');
+  }
+
+  // CARD ANNOTATIONS
+  if(A.length){
+    if(allZero(A,'ACKED')&&allZero(A,'FAILED')&&allZero(A,'DROPPED'))markCard('cc-events','stalled');
+    if(isFlatLine(A,'LAT_P99'))markCard('cc-lat','frozen');
+    if(allZero(A,'WRITE_B')&&allZero(A,'READ_B'))markCard('cc-io','stalled');
+    if(stallLayer==='deadlock')markCard('cc-layer','deadlock');
+  }
+  if(E.length&&allZero(E,'429_%')&&allZero(E,'DROP_%'))markCard('cc-err','stalled');
+  if(B.length&&allZero(B,'Q_FILLED'))markCard('cc-q','stalled');
+  if(B.length&&allZero(B,'CLIENTS')&&allZero(B,'PIPE_ACTIVE'))markCard('cc-pipe','stalled');
+
+  // CHARTS
+  if(A.length){
+    mkLine('ch-events',labels,[
+      {label:'ACKED',data:A.map(r=>Number(r.ACKED)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
+      {label:'FAILED',data:A.map(r=>Number(r.FAILED)||0),borderColor:'#ffb830'},
+      {label:'DROPPED',data:A.map(r=>Number(r.DROPPED)||0),borderColor:'#ff4757'},
+    ]);
+    mkLine('ch-lat',labels,[
+      {label:'MEAN',data:A.map(r=>Number(r.LAT_MEAN)||0),borderColor:'#00d4ff'},
+      {label:'P95',data:A.map(r=>Number(r.LAT_P95)||0),borderColor:'#7c5cfc'},
+      {label:'P99',data:A.map(r=>Number(r.LAT_P99)||0),borderColor:'#ffb830'},
+      {label:'P999',data:A.map(r=>Number(r.LAT_P999)||0),borderColor:'#ff2d55',borderDash:[5,3]},
+      {label:'MAX',data:A.map(r=>Number(r.LAT_MAX)||0),borderColor:'#ff4757',borderDash:[3,3],borderWidth:1},
+    ]);
+    mkLine('ch-io',labels,[
+      {label:'WRITE_B',data:A.map(r=>Number(r.WRITE_B)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
+      {label:'READ_B',data:A.map(r=>Number(r.READ_B)||0),borderColor:'#7c5cfc'},
+    ]);
+  }
+  if(E.length)
+    mkLine('ch-err',thin(E.map(r=>hhmm(r.TIMESTAMP))),[
+      {label:'429_%',data:E.map(r=>Number(r['429_%'])||0),borderColor:'#ffb830'},
+      {label:'DROP_%',data:E.map(r=>Number(r['DROP_%'])||0),borderColor:'#ff4757'},
+      {label:'DUPE_%',data:E.map(r=>Number(r['DUPE_%'])||0),borderColor:'#7c5cfc'},
+      {label:'RETRY_%',data:E.map(r=>Number(r['RETRY_%'])||0),borderColor:'#00c875',borderDash:[3,3],borderWidth:1},
+    ]);
+
+  // Layer flow chart — key stall diagnosis chart
+  if(A.length||B.length){
+    const fl=thin(A.length?A.map(r=>hhmm(r.TIMESTAMP)):B.map(r=>hhmm(r.TIMESTAMP)));
+    const ds=[];
+    if(A.length){
+      ds.push({label:'FB_ACTIVE (input buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true});
+      ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true});
+    }
+    if(B.length)ds.push({label:'PIPE_ACTIVE (pipeline)',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'});
+    mkLine('ch-layer',fl,ds);
+  }
+
+  if(B.length){
+    const bl=thin(B.map(r=>hhmm(r.TIMESTAMP)));
+    mkLine('ch-q',bl,[
+      {label:'Q_FILLED',data:B.map(r=>Number(r.Q_FILLED)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
+      {label:'Q_PCT %',data:B.map(r=>(Number(r.Q_PCT)||0)*100),borderColor:'#ff4757',yAxisID:'y2'},
+    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}});
+    mkLine('ch-pipe',bl,[
+      {label:'CLIENTS',data:B.map(r=>Number(r.CLIENTS)||0),borderColor:'#00c875'},
+      {label:'PIPE_ACTIVE',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'},
+      {label:'RETRY',data:B.map(r=>Number(r.RETRY)||0),borderColor:'#ffb830'},
+      {label:'MODULES',data:B.map(r=>Number(r.MODULES)||0),borderColor:'#7c5cfc',borderDash:[4,3]},
+    ]);
+  }
+
+  if(C.length){
+    const cl=thin(C.map(r=>hhmm(r.TIMESTAMP)));
+    mkLine('ch-mem',cl,[
+      {label:'MEM_ALLOC_MB',data:C.map(r=>Number(r.MEM_ALLOC_MB)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
+      {label:'RSS_MB',data:C.map(r=>Number(r.RSS_MB)||0),borderColor:'#7c5cfc',backgroundColor:'rgba(124,92,252,.04)',fill:true},
+    ]);
+    mkLine('ch-cpu',cl,[
+      {label:'CPU_TOTAL_ms',data:C.map(r=>Number(r.CPU_TOTAL_ms)||0),borderColor:'#ffb830'},
+      {label:'CPU_USER_ms',data:C.map(r=>Number(r.CPU_USER_ms)||0),borderColor:'#00c875'},
+      {label:'CPU_SYS_ms',data:C.map(r=>Number(r.CPU_SYS_ms)||0),borderColor:'#ff6b6b'},
+    ]);
+  }
+
+  // INPUT TABLE
+  if(D.length){
+    document.getElementById('sec-inp').style.display='';
+    const ids=[...new Set(D.map(r=>r.INPUT_ID))];
+    const lasts=ids.map(id=>D.filter(r=>r.INPUT_ID===id).pop());
+    mkBar('ch-ibar',lasts.map(r=>{const id=String(r.INPUT_ID||'');return id.length>28?'\u2026'+id.slice(-22):id;}),[
+      {label:'MEAN_ms',data:lasts.map(r=>Number(r.MEAN_ms)||0),backgroundColor:'rgba(0,212,255,.65)'},
+      {label:'P95_ms',data:lasts.map(r=>Number(r.P95_ms)||0),backgroundColor:'rgba(124,92,252,.65)'},
+      {label:'P99_ms',data:lasts.map(r=>Number(r.P99_ms)||0),backgroundColor:'rgba(255,184,48,.65)'},
+      {label:'MAX_ms',data:lasts.map(r=>Number(r.MAX_ms)||0),backgroundColor:'rgba(255,71,87,.65)'},
+    ]);
+    const tbody=document.getElementById('itbody');tbody.innerHTML='';
+    ids.forEach(id=>{
+      const rows=D.filter(r=>r.INPUT_ID===id);
+      const cn=rows.map(r=>Number(r.COUNT));
+      const frzn=cn.length>5&&cn.every(c=>c===cn[0]);
+      const r=rows[rows.length-1];const p99=Number(r.P99_ms)||0;
+      let pc,pt;
+      if(frzn&&p99>30000){pc='crit';pt='FROZEN+CRIT';}
+      else if(frzn){pc='frozen';pt='FROZEN';}
+      else if(p99>30000){pc='crit';pt='CRITICAL';}
+      else if(p99>5000){pc='err';pt='SLOW';}
+      else{pc='ok';pt='OK';}
+      const sid=id.length>44?id.slice(0,20)+'\u2026'+id.slice(-18):id;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td title="${id}" style="color:var(--text);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sid}</td>
+        <td>${fmt(Number(r.COUNT))}</td><td>${r.MEAN_ms}</td><td>${r.MEDIAN_ms}</td>
+        <td style="${Number(r.P95_ms)>10000?'color:var(--warn)':''}">${r.P95_ms}</td>
+        <td style="${Number(r.P99_ms)>10000?'color:var(--err)':''}">${r.P99_ms}</td>
+        <td style="${Number(r.MAX_ms)>30000?'color:var(--crit)':''}">${r.MAX_ms}</td>
+        <td>${r.STDDEV_ms}</td><td><span class="pill ${pc}">${pt}</span></td>`;
+      tbody.appendChild(tr);
+    });
+  }else document.getElementById('sec-inp').style.display='none';
+}
+</script>
+</body>
+</html>
