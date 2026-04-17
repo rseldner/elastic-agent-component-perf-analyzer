@@ -93,14 +93,14 @@ echo "Discovering components..."
 
 COMPONENTS=$(jq -rn '
   [inputs | {
-    binary:  .["component.binary"],
-    dataset: .["component.dataset"],
-    ctype:   .["component.type"],
-    cid:     .["component.id"]
+    binary:  (.["component.binary"] // .component.binary),
+    dataset: (.["component.dataset"] // .component.dataset),
+    ctype:   (.["component.type"]   // .component.type),
+    cid:     (.["component.id"]    // .component.id)
   }] |
   unique_by(.cid) |
   .[] |
-  select(.cid != null) |
+  select(.cid != null and (.cid|tostring|length) > 0) |
   [.binary, .dataset, .ctype, .cid] | @tsv
 ' $FILES)
 
@@ -194,10 +194,10 @@ fi
 echo "Analyzing: ${SELECTED_IDS[*]}"
 echo ""
 
-# Build jq OR-filter for selected component IDs
-CID_FILTER=$(printf '.["component.id"] == "%s"' "${SELECTED_IDS[0]}")
+# Build jq OR-filter for selected component IDs (flat + nested component.* from OTel-shaped lines)
+CID_FILTER=$(printf '((.["component.id"] // .component.id // "") == "%s")' "${SELECTED_IDS[0]}")
 for cid in "${SELECTED_IDS[@]:1}"; do
-  CID_FILTER+=$(printf ' or .["component.id"] == "%s"' "$cid")
+  CID_FILTER+=$(printf ' or ((.["component.id"] // .component.id // "") == "%s")' "$cid")
 done
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ run_table "Table A: Output Health" "A-output-health.tsv" '
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.libbeat != null)) |
     .["@timestamp"] as $ts |
-    .["component.id"] as $cid |
+    (.["component.id"] // .component.id // "") as $cid |
     (.monitoring.metrics.filebeat.events.active // 0) as $fb_active |
     .monitoring.metrics.libbeat |
     [
@@ -271,7 +271,7 @@ run_table "Table B: Pipeline & Queue" "B-pipeline-queue.tsv" '
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.libbeat != null)) |
     .["@timestamp"] as $ts |
-    .["component.id"] as $cid |
+    (.["component.id"] // .component.id // "") as $cid |
     .monitoring.metrics.libbeat |
     [
       $ts, $cid,
@@ -302,7 +302,7 @@ run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.beat != null)) |
     .["@timestamp"] as $ts |
-    .["component.id"] as $cid |
+    (.["component.id"] // .component.id // "") as $cid |
     .monitoring.metrics as $m |
     $m.beat |
     [
@@ -332,7 +332,7 @@ run_table "Table D: Per-Input Processing" "D-input-processing.tsv" '
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.dataset != null)) |
     .["@timestamp"] as $ts |
-    .["component.id"] as $cid |
+    (.["component.id"] // .component.id // "") as $cid |
     .monitoring.dataset | to_entries[] |
     select(.value.processing_time.histogram.count > 0) |
     .key as $iid |
@@ -360,7 +360,7 @@ run_table "Table E: Health Ratios" "E-health-ratios.tsv" '
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.libbeat != null)) |
     .["@timestamp"] as $ts |
-    .["component.id"] as $cid |
+    (.["component.id"] // .component.id // "") as $cid |
     .monitoring.metrics.libbeat |
     (.output.events.acked       // 0) as $acked   |
     (.output.events.failed      // 0) as $failed  |
@@ -398,7 +398,7 @@ echo " Output files:"
 echo "$SEP"
 ls -lh "$OUT_DIR"/*.tsv | awk '{printf "  %-8s %s\n", $5, $9}'
 echo ""
-echo " Load in analyzer : open elastic-agent-analyzer.html"
+echo " Load in analyzer : open input-analyzer.html"
 echo " Open folder      : open ${OUT_DIR}"
 echo "$SEP"
 echo ""
