@@ -17,7 +17,14 @@ chmod +x elastic-agent-perf.sh
 
 Useful options: `--all` (every component), `--component <id>`, `--component-regex <pattern>`, `--list` (components only). Run `./elastic-agent-perf.sh --help` for details.
 
-Output goes to `perf-analysis-YYYYMMDD-HHMMSS/` under the log directory, with five space-aligned TSV files: `A-output-health.tsv`, `B-pipeline-queue.tsv`, `C-beat-resources.tsv`, `D-input-processing.tsv`, `E-health-ratios.tsv`.
+Output goes to `perf-analysis-YYYYMMDD-HHMMSS/` under the log directory, with five space-aligned TSV files: 
+```
+A-output-health.tsv
+B-pipeline-queue.tsv
+C-beat-resources.tsv
+D-input-processing.tsv
+E-health-ratios.tsv
+```
 
 ## Visualize
 
