@@ -21,7 +21,7 @@
 # Outputs to:  <log-dir>/perf-analysis-YYYYMMDD-HHMMSS/
 #   A-output-health.tsv     — libbeat output counters + write latency
 #   B-pipeline-queue.tsv    — pipeline event flow + queue depth
-#   C-beat-resources.tsv    — CPU, memory, goroutines
+#   C-beat-resources.tsv    — CPU, memory, goroutines, filebeat harvester gauges (when present)
 #   D-input-processing.tsv  — per-input codec processing latency (active only)
 #   E-health-ratios.tsv     — derived success/error/saturation ratios
 #
@@ -297,12 +297,14 @@ run_table "Table B: Pipeline & Queue" "B-pipeline-queue.tsv" '
 run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
   ["TIMESTAMP","COMPONENT_ID","VERSION","UPTIME_s",
    "CPU_TOTAL_ms","CPU_USER_ms","CPU_SYS_ms",
-   "MEM_ALLOC_MB","RSS_MB","GOROUTINES"] | @tsv,
+   "MEM_ALLOC_MB","RSS_MB","GOROUTINES",
+   "HARV_RUNNING","HARV_FILES"] | @tsv,
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.beat != null)) |
     .["@timestamp"] as $ts |
     .["component.id"] as $cid |
-    .monitoring.metrics.beat |
+    .monitoring.metrics as $m |
+    $m.beat |
     [
       $ts, $cid,
       .info.version,
@@ -312,7 +314,9 @@ run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
       (.cpu.system.time.ms      // 0),
       (.memstats.memory_alloc / 1048576 | round),
       (.memstats.rss          / 1048576 | round),
-      (.runtime.goroutines      // 0)
+      (.runtime.goroutines      // 0),
+      (($m.filebeat.harvester.running   // 0)),
+      (($m.filebeat.harvester.open_files // 0))
     ] | @tsv
   )
 '

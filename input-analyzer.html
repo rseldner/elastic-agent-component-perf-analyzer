@@ -50,10 +50,12 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 #stall-banner.mode-input{background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.4)}
 #stall-banner.mode-pipeline{background:rgba(255,71,87,.07);border-color:rgba(255,71,87,.4)}
 #stall-banner.mode-deadlock{background:rgba(255,71,87,.1);border-color:rgba(255,71,87,.6)}
+#stall-banner.mode-idle{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.32)}
 .sb-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;margin-bottom:6px}
 .sb-title.mode-input{color:var(--crit)}
 .sb-title.mode-pipeline{color:var(--err)}
 .sb-title.mode-deadlock{color:var(--err)}
+.sb-title.mode-idle{color:var(--info)}
 .sb-body{font-size:12px;color:var(--mid);line-height:1.8;font-family:'IBM Plex Mono',monospace}
 #flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px}
 .flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
@@ -67,9 +69,11 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .fa-line{width:100%;height:2px;background:var(--bdr2)}
 .fa-line.blocked{background:var(--crit)}
 .fa-line.flowing{background:var(--ok)}
+.fa-line.idle-tail{background:linear-gradient(90deg,rgba(0,212,255,.25),rgba(0,212,255,.55),rgba(0,212,255,.25))}
 .fa-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);margin-top:3px;white-space:nowrap}
 .fa-label.blocked{color:var(--crit)}
 .fa-label.flowing{color:var(--ok)}
+.fa-label.idle-tail{color:var(--info)}
 .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:20px}
 .hc{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;text-align:center}
 .hc-icon{font-size:18px;margin-bottom:4px}
@@ -376,7 +380,7 @@ const STAT_TIPS = {
   'Uptime':        'Beat process uptime in hours. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
   'Goroutines':    'Active Go goroutines. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
   'Version':       'Beat version from monitoring metrics.',
-  'Harvesters':    'Active filebeat harvesters reading files. Drops to 0 = all file reading stopped. Non-filebeat components will show blank here.',
+  'Harvesters':    'Active filebeat harvesters (tailers). Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
   'Harvester FDs': 'File handles held open by filebeat harvesters. High value + stalled events = files held open but not producing (rotation or permission issue).',
   'FD Usage':      'Open file descriptors vs soft ulimit. &gt;90% = risk of silent failures when opening new files, log rotation, or new inputs.',
   'Registrar':     'Number of tracked file states in the filebeat registrar. &gt;100k causes slow startup and memory pressure.',
@@ -439,6 +443,50 @@ function diagnoseLayer(A,B){
   return'input';
 }
 
+// Positive step deltas for cumulative libbeat counters (restart = negative step ignored).
+function sumStepDelta(rows,key){
+  if(!rows||rows.length<2)return 0;
+  let s=0;
+  for(let i=1;i<rows.length;i++){
+    const d=(Number(rows[i][key])||0)-(Number(rows[i-1][key])||0);
+    if(d>0)s+=d;
+  }
+  return s;
+}
+
+// Refines diagnoseLayer 'input' when there are no acks/fails for the window (same inputs as stall banner).
+function refineInputStall(A,B,C){
+  const maxFb=A.length?maxKey(A,'FB_ACTIVE'):0;
+  const pubD=B.length>=2?sumStepDelta(B,'PUBLISHED'):null;
+  const lastCli=B.length?Number(B[B.length-1].CLIENTS)||0:null;
+  const harv=C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v))).map(Number);
+
+  if(maxFb>0)
+    return{kind:'input_buffer',maxFb,pubD,lastCli,harvN:harv.length};
+
+  if(harv.length===0)
+    return{kind:'unknown',reason:'no_harv_series',pubD,lastCli};
+
+  const zeroFrac=harv.filter(v=>v===0).length/harv.length;
+  if(zeroFrac>0.5)
+    return{kind:'harvester_stopped',zeroFrac,harvLast:harv[harv.length-1],pubD,lastCli};
+
+  const stableTail=(Math.min(...harv)>0)||(zeroFrac<=0.15&&harv[harv.length-1]>0);
+  if(!stableTail)
+    return{kind:'unknown',reason:'intermittent_harv',zeroFrac,pubD,lastCli};
+
+  if(pubD!==null&&pubD===0&&lastCli>0)
+    return{kind:'likely_idle_tail',confidence:harv.length>=5?'high':'medium',pubD,lastCli,harvLast:harv[harv.length-1]};
+
+  if(pubD!==null&&pubD===0&&lastCli===0)
+    return{kind:'no_pipeline_clients_tail',pubD,lastCli};
+
+  if(pubD===null&&lastCli!=null&&lastCli>0)
+    return{kind:'likely_idle_tail',confidence:'low',pubD:null,lastCli,harvLast:harv[harv.length-1]};
+
+  return{kind:'unknown',reason:'tail_inconclusive',pubD,lastCli};
+}
+
 function resetAll(){
   Object.keys(DATA).forEach(k=>DATA[k]=null);
   ['A','B','C','D','E'].forEach(k=>{const s=document.getElementById('fs-'+k);s.classList.remove('ok');s.querySelector('.fs-name').textContent='not loaded';});
@@ -492,6 +540,8 @@ function renderComp(cid){
   const totAck=sumKey(A,'ACKED'),totFail=sumKey(A,'FAILED');
   const isStalled=A.length>5&&totAck===0&&totFail===0;
   const stallLayer=isStalled?diagnoseLayer(A,B):null;
+  const inputRefine=(isStalled&&stallLayer==='input')?refineInputStall(A,B,C):null;
+  const idleTailPattern=inputRefine&&inputRefine.kind==='likely_idle_tail';
 
   const lastA=A.length?A[A.length-1]:{},lastB=B.length?B[B.length-1]:{};
   const fbAct=Number(lastA.FB_ACTIVE||0);
@@ -514,11 +564,38 @@ function renderComp(cid){
       banner.classList.add('mode-pipeline');sbTitle.className='sb-title mode-pipeline';
       sbTitle.innerHTML='&#128308; PIPELINE\u2192OUTPUT STALL \u2014 events queued but not reaching output';
       sbBody.innerHTML='PIPE_ACTIVE='+fmt(pipeAct)+' events in pipeline, OUT_ACTIVE=0, ACKED=0 for ~'+winMin+' min.<br>Output worker is not consuming from the queue. Check output configuration and connection to ES/Logstash.';
+    }else if(idleTailPattern){
+      banner.classList.add('mode-idle');sbTitle.className='sb-title mode-idle';
+      sbTitle.innerHTML='&#9201; ZERO OUTPUT THROUGHPUT \u2014 likely idle source (harvesters still tailing)';
+      const conf=inputRefine.confidence==='high'?'High confidence: ':inputRefine.confidence==='medium'?'Medium confidence: ':'Low confidence (few harvester samples or missing PUBLISHED deltas): ';
+      const pubLine=inputRefine.pubD===null
+        ?'Table B had too few rows to sum PUBLISHED deltas; harvesters are up and pipeline.clients&gt;0.'
+        :'pipeline.events.published did not increase across table B, ';
+      sbBody.innerHTML=conf+'HARV_RUNNING\u2248'+fmt(inputRefine.harvLast||0,0)+', '+pubLine+' FB_ACTIVE=0 across ~'+winMin+' min.<br>'+
+        'Tailers are open at EOF waiting for new lines; this is often normal when the log writer is quiet. If you expected traffic, verify the correct paths and that the application is logging.<br>'+
+        'Beat uptime: '+beatH+'h.';
+    }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='input_buffer'){
+      banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
+      sbTitle.innerHTML='&#128308; INPUT BUFFER BACKLOG \u2014 events held in filebeat, not reaching pipeline';
+      sbBody.innerHTML='FB_ACTIVE peaked at '+fmt(inputRefine.maxFb||0,0)+' across ~'+winMin+' min with no acks/fails. Harvesters may still be reading; check processors, pipeline blocking, or input-to-pipeline wiring.<br>'+
+        'Beat uptime: '+beatH+'h.';
+    }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='harvester_stopped'){
+      banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
+      sbTitle.innerHTML='&#128308; INPUT STALL \u2014 harvesters mostly not running';
+      sbBody.innerHTML='HARV_RUNNING was 0 in ~'+Math.round((inputRefine.zeroFrac||0)*100)+'% of samples; no events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+
+        'Nothing is being tailed. Causes: no matching paths, permissions, rotation gap, FD limits, or misconfiguration. Check HARV_FILES and filebeat logs around '+String(tsFirst).slice(11,16)+' UTC.';
+    }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='no_pipeline_clients_tail'){
+      banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
+      sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 pipeline.clients=0';
+      sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min; pipeline.clients stayed 0 while throughput was silent. Inputs may not be wired to the publisher, or the beat is still starting.<br>'+
+        'Beat uptime: '+beatH+'h. Check agent policy and filebeat input logs.';
     }else{
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 beat alive but no events entering pipeline';
       sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+(B.length&&Number(lastB.CLIENTS||0)===0?'pipeline.clients=0 \u2014 inputs never opened a pipeline connection. ':'')+
-      'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.';
+        (C.length&&!idleTailPattern&&!C.some(r=>r.HARV_RUNNING!==''&&r.HARV_RUNNING!==undefined&&r.HARV_RUNNING!==null&&!isNaN(Number(r.HARV_RUNNING)))?
+          'This export has no filebeat harvester columns in table C; re-run perf extraction with an updated script to distinguish idle tail vs stopped harvesters. ':'')+
+        'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.';
     }
   }else banner.style.display='none';
 
@@ -531,13 +608,13 @@ function renderComp(cid){
     const fbV=fv(fbAct,1000,5000);
     const qV={v:fmt(qFill)+(qMax?'/'+fmt(qMax):''),c:qPct>=1?'crit':qPct>=0.8?'warn':qPct>0?'ok':'dim'};
     const oV=fv(outAct,100,3000);
-    const ackV={v:fmt(totAck),c:totAck>0?'ok':'crit'};
-    const a1Cls=stallLayer==='input'?'blocked':fbAct>0?'flowing':'';
+    const ackV={v:fmt(totAck),c:totAck>0?'ok':idleTailPattern?'warn':'crit'};
+    const a1Cls=idleTailPattern?'idle-tail':stallLayer==='input'?'blocked':fbAct>0?'flowing':'';
     const a2Cls=stallLayer==='pipeline'?'blocked':pipeAct>0?'flowing':'';
     const a3Cls=stallLayer==='deadlock'?'blocked':outAct>0?'flowing':'';
     row.innerHTML=`
       <div class="flow-node"><div class="fn-label">Input buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">FB_ACTIVE</div></div>
-      <div class="flow-arrow"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1Cls==='blocked'?'&#10006; blocked':a1Cls==='flowing'?'&#10004;':''}</div></div>
+      <div class="flow-arrow"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1Cls==='blocked'?'&#10006; blocked':a1Cls==='idle-tail'?'EOF idle':a1Cls==='flowing'?'&#10004;':''}</div></div>
       <div class="flow-node"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${Math.round(qPct*100)}% full</div></div>
       <div class="flow-arrow"><div class="fa-line ${a2Cls}"></div><div class="fa-label ${a2Cls}">${a2Cls==='blocked'?'&#10006; blocked':a2Cls==='flowing'?'&#10004;':''}</div></div>
       <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">OUT_ACTIVE</div></div>
@@ -546,7 +623,7 @@ function renderComp(cid){
   }else fd.style.display='none';
 
   // HEALTH GRID
-  if(A.length)mkHealth(totAck>0?'&#9989;':'&#10060;','Throughput',totAck>0?'ok':'crit');
+  if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
   if(B.length){
     mkHealth(qPct>=1?'&#128308;':qPct>=0.8?'&#128993;':'&#9989;','Queue',qPct>=1?'crit':qPct>=0.8?'warn':'ok');
     mkHealth(Number(lastB.CLIENTS||0)===0?'&#10060;':'&#9989;','Pipeline',Number(lastB.CLIENTS||0)===0?'crit':'ok');
@@ -578,10 +655,8 @@ function renderComp(cid){
         'OUT_ACTIVE='+fmt(outAct)+' sustained with ACKED=0 across ~'+fmt(A.length*30/60,0)+' min. '+
         'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
         '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.']);
-    // For input/pipeline stall: stall banner already covers this verbatim — suppress here.
-    // Only emit if banner is NOT shown (i.e. isStalled=false but acked=0 for other reasons).
-    if(!isStalled&&totAck===0&&totFail===0&&A.length>5)
-      critAlerts.push(['warn','Zero throughput for entire window','No events acked or failed. Beat may be starting up, or inputs have no data to process.']);
+    if(totAck===0&&totFail===0&&A.length>0&&A.length<=5)
+      warnAlerts.push(['warn','Zero throughput in short capture','Only '+A.length+' sample(s); stall classification needs more rows. Re-capture if the quiet period continues. May be startup, idle source, or blocked input.']);
 
     const p99p=maxKey(A,'LAT_P99'),p999p=maxKey(A,'LAT_P999');
     const latFlat=isFlatLine(A,'LAT_P99');
@@ -664,18 +739,30 @@ function renderComp(cid){
   if(isStalled&&C.length>20){
     const uptF=Number(C[0].UPTIME_s)||0,uptL=Number(C[C.length-1].UPTIME_s)||0;
     const goro=C.map(r=>Number(r.GOROUTINES)||0);
-    infoAlerts.push(['info','Beat process healthy \u2014 no crashes or restarts detected',
-      'Uptime incremented continuously '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h. '+
-      'Goroutines stable '+Math.min(...goro)+'\u2013'+Math.max(...goro)+'. '+
-      'This is a silent stall, not a crash \u2014 the issue is in the pipeline or output layer.']);
+    if(idleTailPattern){
+      infoAlerts.push(['info','Process steady during quiet period',
+        'Uptime '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h, goroutines '+Math.min(...goro)+'\u2013'+Math.max(...goro)+
+        '. Pattern matches an open tail with no new bytes, not a process crash.']);
+    }else if(stallLayer==='pipeline'||stallLayer==='deadlock'){
+      infoAlerts.push(['info','Beat process healthy \u2014 no crashes or restarts detected',
+        'Uptime incremented continuously '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h. '+
+        'Goroutines stable '+Math.min(...goro)+'\u2013'+Math.max(...goro)+'. '+
+        'This is a silent stall, not a crash \u2014 the issue is in the pipeline or output layer.']);
+    }else{
+      infoAlerts.push(['info','Beat process healthy \u2014 no crashes or restarts detected',
+        'Uptime incremented continuously '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h. '+
+        'Goroutines stable '+Math.min(...goro)+'\u2013'+Math.max(...goro)+'. '+
+        'Use the stall banner classification (harvesters, FB_ACTIVE, pipeline.clients) to separate idle tail from misconfiguration.']);
+    }
   }
 
   // ── HARVESTER, FD, REGISTRAR (filebeat-specific) ────
   if(C.length){
     const harvRun = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
+    const skipHarvStoppedBanner=isStalled&&stallLayer==='input'&&inputRefine&&inputRefine.kind==='harvester_stopped';
     if(harvRun.length > 5){
       const zeroHarv = harvRun.filter(v=>Number(v)===0).length;
-      if(zeroHarv > harvRun.length * 0.5)
+      if(!skipHarvStoppedBanner&&zeroHarv > harvRun.length * 0.5)
         critAlerts.push(['error','Harvesters stopped — '+Math.round(zeroHarv/harvRun.length*100)+'% of intervals show 0 active harvesters',
           'HARV_RUNNING=0 means filebeat has stopped reading all files. '+
           'Causes: file permission change, all files rotated away, inode exhaustion, or misconfiguration. '+
@@ -783,7 +870,7 @@ function renderComp(cid){
 
   // CARD ANNOTATIONS
   if(A.length){
-    if(allZero(A,'ACKED')&&allZero(A,'FAILED')&&allZero(A,'DROPPED'))markCard('cc-events','stalled');
+    if(allZero(A,'ACKED')&&allZero(A,'FAILED')&&allZero(A,'DROPPED')){if(!idleTailPattern)markCard('cc-events','stalled');}
     if(isFlatLine(A,'LAT_P99'))markCard('cc-lat','frozen');
     if(allZero(A,'WRITE_B')&&allZero(A,'READ_B'))markCard('cc-io','stalled');
     if(stallLayer==='deadlock')markCard('cc-layer','deadlock');
