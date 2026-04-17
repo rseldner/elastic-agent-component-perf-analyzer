@@ -212,6 +212,7 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="cc" id="cc-lat"><div class="cc-title">Write latency (ms)</div><div class="cc-sub">MEAN / P95 / P99 / P999 / MAX &mdash; lifetime reservoir</div><canvas id="ch-lat" height="175"></canvas></div>
       <div class="cc" id="cc-io"><div class="cc-title">Network I/O (bytes/interval)</div><div class="cc-sub">WRITE_B / READ_B &mdash; 30s deltas</div><canvas id="ch-io" height="175"></canvas></div>
       <div class="cc" id="cc-err"><div class="cc-title">Error rates (%)</div><div class="cc-sub">429_% / DROP_% / DUPE_% / RETRY_% per interval</div><canvas id="ch-err" height="175"></canvas></div>
+      <div class="cc" id="cc-ioerr"><div class="cc-title">Transport errors per interval</div><div class="cc-sub">WRITE_ERR (TLS/network) &middot; READ_ERR (response parse) &mdash; distinct from event-level FAILED</div><canvas id="ch-ioerr" height="175"></canvas></div>
     </div>
   </div>
 
@@ -239,6 +240,8 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="cgrid">
       <div class="cc"><div class="cc-title">Memory (MB)</div><div class="cc-sub">MEM_ALLOC_MB (Go heap, oscillates with GC) / RSS_MB (OS resident)</div><canvas id="ch-mem" height="175"></canvas></div>
       <div class="cc"><div class="cc-title">CPU time per interval (ms)</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30s deltas</div><canvas id="ch-cpu" height="175"></canvas></div>
+      <div class="cc" id="cc-harv" style="display:none"><div class="cc-title">Harvester &amp; file handles</div><div class="cc-sub">HARV_RUNNING (active harvesters) &middot; HARV_FILES (open file handles). Zero harvesters = file reading stopped.</div><canvas id="ch-harv" height="175"></canvas></div>
+      <div class="cc" id="cc-fd" style="display:none"><div class="cc-title">File descriptor usage</div><div class="cc-sub">FD_OPEN vs FD_LIMIT (soft ulimit). &gt;90% full = silent failures opening new files.</div><canvas id="ch-fd" height="175"></canvas></div>
     </div>
   </div>
 
@@ -373,6 +376,12 @@ const STAT_TIPS = {
   'Uptime':        'Beat process uptime in hours. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
   'Goroutines':    'Active Go goroutines. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
   'Version':       'Beat version from monitoring metrics.',
+  'Harvesters':    'Active filebeat harvesters reading files. Drops to 0 = all file reading stopped. Non-filebeat components will show blank here.',
+  'Harvester FDs': 'File handles held open by filebeat harvesters. High value + stalled events = files held open but not producing (rotation or permission issue).',
+  'FD Usage':      'Open file descriptors vs soft ulimit. &gt;90% = risk of silent failures when opening new files, log rotation, or new inputs.',
+  'Registrar':     'Number of tracked file states in the filebeat registrar. &gt;100k causes slow startup and memory pressure.',
+  'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (ES rejected the event). Nonzero = network/TLS issue.',
+  'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = ES sent a response the beat could not interpret.',
 };
 
 function mkAlert(level,title,body,container){
@@ -587,6 +596,16 @@ function renderComp(cid){
         warnAlerts.push(['warn','Write latency p99='+fmt(p99p)+'ms (elevated)','Above 3s. p999='+fmt(p999p)+'ms.']);
     }
     // Frozen latency: already shown via HISTORICAL badge on stat cards and frozen-data chart subtitle — suppress alert.
+
+    // Transport errors — WRITE_ERR/READ_ERR nonzero is always actionable
+    const totWriteErr = sumKey(A,'WRITE_ERR'), totReadErr = sumKey(A,'READ_ERR');
+    if(totWriteErr > 0 || totReadErr > 0)
+      critAlerts.push(['error',
+        'Transport errors: WRITE_ERR='+totWriteErr+', READ_ERR='+totReadErr,
+        'These are connection/TLS-level failures distinct from event-level FAILED. '+
+        (totWriteErr>0 ? 'WRITE_ERR: TCP connection resets, TLS handshake failures, or network timeouts sending to ES/Logstash. ' : '')+
+        (totReadErr>0  ? 'READ_ERR: ES sent a response the beat could not parse (unexpected disconnect, malformed response). ' : '')+
+        'Check beat logs for "connection reset by peer", TLS certificate errors, or ES /var/log entries around these timestamps.']);
   }
 
   if(B.length){
@@ -651,6 +670,36 @@ function renderComp(cid){
       'This is a silent stall, not a crash \u2014 the issue is in the pipeline or output layer.']);
   }
 
+  // ── HARVESTER, FD, REGISTRAR (filebeat-specific) ────
+  if(C.length){
+    const harvRun = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
+    if(harvRun.length > 5){
+      const zeroHarv = harvRun.filter(v=>Number(v)===0).length;
+      if(zeroHarv > harvRun.length * 0.5)
+        critAlerts.push(['error','Harvesters stopped — '+Math.round(zeroHarv/harvRun.length*100)+'% of intervals show 0 active harvesters',
+          'HARV_RUNNING=0 means filebeat has stopped reading all files. '+
+          'Causes: file permission change, all files rotated away, inode exhaustion, or misconfiguration. '+
+          'Check HARV_FILES to see if handles are still held open (file held but not read = rotation issue).']);
+      else if(zeroHarv > 0)
+        warnAlerts.push(['warn','Harvesters intermittently stopped in '+zeroHarv+' interval(s)','HARV_RUNNING dropped to 0 temporarily. Possible file rotation or transient read failure.']);
+    }
+    const fdOpen  = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
+    const fdLimit = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
+    if(fdOpen.length > 0 && fdLimit.length > 0){
+      const maxPct = Math.max(...fdOpen.map((v,i)=> fdLimit[i]>0 ? v/fdLimit[i] : 0));
+      if(maxPct > 0.9)
+        critAlerts.push(['error','File descriptor exhaustion — '+Math.round(maxPct*100)+'% of soft limit used',
+          'FD_OPEN is within 10% of FD_LIMIT. When exhausted the beat silently fails to open new files, stalling harvesters with no error message. '+
+          'Fix: increase ulimit -n or reduce open inputs. Max observed: FD_OPEN='+Math.max(...fdOpen)+', FD_LIMIT='+fdLimit[fdLimit.length-1]+'.']);
+      else if(maxPct > 0.75)
+        warnAlerts.push(['warn','File descriptors at '+Math.round(maxPct*100)+'% of soft limit','FD_OPEN/FD_LIMIT ratio approaching warning threshold. Monitor for growth.']);
+    }
+    const reg = C.map(r=>Number(r.REGISTRAR)).filter(v=>v>0);
+    if(reg.length > 0 && Math.max(...reg) > 100000)
+      warnAlerts.push(['warn','Registrar bloat: '+fmt(Math.max(...reg))+' tracked file states',
+        'Large registrar causes slow startup and elevated memory. Clean up with clean_inactive settings or prune the registry file.']);
+  }
+
   // ── RENDER ────────────────────────────────────────────
   // Critical alerts: grouped if >1, otherwise flat
   if(critAlerts.length===0&&warnAlerts.length===0){
@@ -710,6 +759,26 @@ function renderComp(cid){
     mkStat('Uptime',fmt((Number(last.UPTIME_s)||0)/3600,1)+'h','no restarts','ok');
     mkStat('Goroutines',String(last.GOROUTINES||'--'),'runtime goroutines','');
     mkStat('Version',String(last.VERSION||'--'),'beat version','');
+    // Filebeat-specific cards — only shown when field is present
+    const harvRunVals = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
+    if(harvRunVals.length > 0){
+      const lastHarv = Number(harvRunVals[harvRunVals.length-1]);
+      const lastFiles = Number(C[C.length-1].HARV_FILES)||0;
+      mkStat('Harvesters', String(lastHarv), 'active file readers',
+        lastHarv===0?'crit':lastHarv<3?'warn':'', lastHarv===0?'sf':'');
+      mkStat('Harvester FDs', String(lastFiles), 'file handles open by harvesters', '');
+    }
+    const fdOpenVals = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
+    const fdLimitVals = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
+    if(fdOpenVals.length > 0 && fdLimitVals.length > 0){
+      const pct = Math.round(fdOpenVals[fdOpenVals.length-1] / fdLimitVals[fdLimitVals.length-1] * 100);
+      mkStat('FD Usage', pct+'%', 'of soft fd limit',
+        pct>90?'crit':pct>75?'warn':'', pct>90?'sf':pct>75?'sw':'');
+    }
+    const regVals = C.map(r=>Number(r.REGISTRAR)).filter(v=>v>0);
+    if(regVals.length > 0)
+      mkStat('Registrar', fmt(Math.max(...regVals)), 'tracked file states',
+        Math.max(...regVals)>100000?'warn':'', Math.max(...regVals)>100000?'sw':'');
   }
 
   // CARD ANNOTATIONS
@@ -720,6 +789,7 @@ function renderComp(cid){
     if(stallLayer==='deadlock')markCard('cc-layer','deadlock');
   }
   if(E.length&&allZero(E,'429_%')&&allZero(E,'DROP_%'))markCard('cc-err','stalled');
+  if(A.length&&allZero(A,'WRITE_ERR')&&allZero(A,'READ_ERR'))markCard('cc-ioerr','ok');
   if(B.length&&allZero(B,'Q_FILLED'))markCard('cc-q','stalled');
   if(B.length&&allZero(B,'CLIENTS')&&allZero(B,'PIPE_ACTIVE'))markCard('cc-pipe','stalled');
 
@@ -787,6 +857,44 @@ function renderComp(cid){
       {label:'CPU_USER_ms',data:C.map(r=>Number(r.CPU_USER_ms)||0),borderColor:'#00c875'},
       {label:'CPU_SYS_ms',data:C.map(r=>Number(r.CPU_SYS_ms)||0),borderColor:'#ff6b6b'},
     ]);
+  }
+
+  // Transport errors chart — always render when A available
+  if(A.length){
+    const hasErrs = !allZero(A,'WRITE_ERR')||!allZero(A,'READ_ERR');
+    if(!hasErrs) markCard('cc-ioerr','stalled');
+    mkLine('ch-ioerr',labels,[
+      {label:'WRITE_ERR',data:A.map(r=>Number(r.WRITE_ERR)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true},
+      {label:'READ_ERR', data:A.map(r=>Number(r.READ_ERR)||0), borderColor:'#ffb830'},
+    ]);
+  }
+
+  // Harvester + FD charts — only shown when data is present (filebeat only)
+  if(C.length){
+    const cl=thin(C.map(r=>hhmm(r.TIMESTAMP)));
+    const harvRunVals2 = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
+    if(harvRunVals2.length > 0){
+      document.getElementById('cc-harv').style.display='';
+      mkLine('ch-harv',cl,[
+        {label:'HARV_RUNNING (active)',data:C.map(r=>Number(r.HARV_RUNNING)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
+        {label:'HARV_FILES (open FDs)', data:C.map(r=>Number(r.HARV_FILES)||0), borderColor:'#7c5cfc'},
+      ]);
+    }
+    const fdOpenVals2 = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
+    const fdLimitVals2 = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
+    if(fdOpenVals2.length > 0){
+      document.getElementById('cc-fd').style.display='';
+      // Dual-axis: raw counts on left, % utilisation on right
+      const fdPct = C.map((r,i)=>{
+        const lim=Number(r.FD_LIMIT)||0;
+        return lim>0 ? Math.round(Number(r.FD_OPEN)/lim*100) : 0;
+      });
+      mkLine('ch-fd',cl,[
+        {label:'FD_OPEN',  data:C.map(r=>Number(r.FD_OPEN)||0),  borderColor:'#ffb830',backgroundColor:'rgba(255,184,48,.05)',fill:true},
+        {label:'FD_LIMIT', data:C.map(r=>Number(r.FD_LIMIT)||0), borderColor:'#ff4757',borderDash:[4,3]},
+        {label:'Usage %',  data:fdPct, borderColor:'#ff2d55', yAxisID:'y2'},
+      ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}});
+    }
   }
 
   // INPUT TABLE
