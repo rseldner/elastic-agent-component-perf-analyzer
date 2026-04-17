@@ -109,8 +109,15 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .sb-title.mode-deadlock{color:var(--err)}
 .sb-title.mode-idle{color:var(--info)}
 .sb-body{font-size:12px;color:var(--mid);line-height:1.8;font-family:'IBM Plex Mono',monospace}
+.sb-persist{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--text);line-height:1.75}
+#stall-banner.mode-idle .sb-persist{border-top-color:rgba(0,212,255,.15)}
+.sb-persist .pt-tag{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-right:8px;vertical-align:middle;white-space:nowrap}
+.sb-persist .pt-sustained{background:rgba(255,45,85,.18);color:#ffb3bd}
+.sb-persist .pt-transient{background:rgba(126,200,227,.12);color:var(--info)}
+.sb-persist .pt-moderate{background:rgba(255,184,48,.12);color:var(--warn)}
 #flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px}
-.flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.flow-persist{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);line-height:1.65;margin-bottom:14px;max-width:96ch}
 .flow-row{display:flex;align-items:center;flex-wrap:nowrap}
 .flow-node{display:flex;flex-direction:column;align-items:center;min-width:90px}
 .fn-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
@@ -273,7 +280,7 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 
   <div id="stall-banner"><div class="sb-title" id="sb-title"></div><div class="sb-body" id="sb-body"></div></div>
-  <div id="flow-diagram"><div class="flow-title">Event flow &mdash; latest snapshot</div><div class="flow-row" id="flow-row"></div></div>
+  <div id="flow-diagram"><div class="flow-title">Event flow</div><div class="flow-persist" id="flow-persist"></div><div class="flow-row" id="flow-row"></div></div>
   <div class="health-grid" id="health-grid"></div>
   <div id="alerts"></div>
 
@@ -445,10 +452,36 @@ function mkLine(id,labels,datasets,extraScales,lineOpts){
   if(yFmt==='durationMs')yTicks.callback=v=>fmtDurationMsAxis(v);
   else if(yFmt==='bytes')yTicks.callback=v=>fmtBytes(v);
   else if(yFmt==='compactNum')yTicks.callback=v=>fmt(Number(v));
+  const xTs=lineOpts.xTimestamps;
+  const useXTime=xTs&&xTs.length===labels.length&&labels.length>0;
+  const maxXTicks=lineOpts.xAxisTickCount||18;
+  const xTitle=lineOpts.xRangeTitle;
+  const xTitleCfg=xTitle?{display:true,text:xTitle,color:'#5a6478',font:{size:10,family:"'IBM Plex Mono',monospace"},padding:{top:0,bottom:6}}:undefined;
+  let xScale;
+  if(useXTime){
+    xScale={
+      grid:{color:'#1a1e25'},
+      ticks:{maxRotation:40,minRotation:0,autoSkip:false},
+      afterBuildTicks(scale){
+        const n=scale.chart.data.labels.length;
+        if(n!==xTs.length)return;
+        const idx=spreadTickIndices(n,maxXTicks);
+        scale.ticks=idx.map(i=>({value:i,label:fmtChartAxisTime(xTs[i],xTs[0],xTs[n-1])}));
+      },
+      ...(xTitleCfg?{title:xTitleCfg}:{})
+    };
+  }else{
+    xScale={grid:{color:'#1a1e25'},ticks:{maxTicksLimit:10,maxRotation:0},...(xTitleCfg?{title:xTitleCfg}:{})};
+  }
   const plugins={legend:{display:datasets.length>1},...chartTooltipYFormat(yFmt)};
+  if(useXTime){
+    plugins.tooltip=plugins.tooltip||{};
+    plugins.tooltip.callbacks=plugins.tooltip.callbacks||{};
+    plugins.tooltip.callbacks.title=items=>fmtChartTooltipTime(xTs[items[0].dataIndex]);
+  }
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets},options:{
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
-    scales:{x:{ticks:{maxTicksLimit:8,maxRotation:0},grid:{color:'#1a1e25'}},y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:yTicks},...(extraScales||{})},
+    scales:{x:xScale,y:{beginAtZero:true,grid:{color:'#1a1e25'},ticks:yTicks},...(extraScales||{})},
     plugins
   }});
 }
@@ -473,6 +506,44 @@ function mkBar(id,labels,datasets,barOpts){
 // HELPERS
 function thin(arr,n=60){if(arr.length<=n)return arr;const s=Math.ceil(arr.length/n);return arr.map((v,i)=>i%s===0?v:'');}
 function hhmm(ts){const m=String(ts||'').match(/T(\d{2}:\d{2})/);return m?m[1]:String(ts);}
+/** Placeholder category labels (real times come from xTimestamps + afterBuildTicks). */
+function chartPlaceholderLabels(n){return Array.from({length:n},()=>'\u00a0');}
+/** ~uniform tick indices including window start and end. */
+function spreadTickIndices(n,maxTicks){
+  if(n<=0)return[];
+  if(n===1)return[0];
+  const cap=Number(maxTicks)>0?Number(maxTicks):16;
+  const m=Math.max(2,Math.min(cap,n));
+  const s=new Set([0,n-1]);
+  const inner=m-2;
+  for(let k=1;k<=inner;k++)s.add(Math.round((k/(inner+1))*(n-1)));
+  return[...s].sort((a,b)=>a-b);
+}
+/** X tick text: clock-only when the whole window is one UTC day; otherwise mm-dd HH:MM. */
+function fmtChartAxisTime(ts,rangeFirst,rangeLast){
+  const dTs=String(ts||'').slice(0,10);
+  const d0=String(rangeFirst||'').slice(0,10),d1=String(rangeLast||'').slice(0,10);
+  const hm=hhmm(ts);
+  if(d0&&d1&&d0===d1)return hm;
+  if(dTs&&d0&&dTs===d0)return hm;
+  const s=String(ts||'');
+  if(s.length>=16)return s.slice(5,16).replace('T',' ');
+  return hm;
+}
+/** Tooltip title: full UTC timestamp for the hovered row. */
+function fmtChartTooltipTime(ts){
+  const s=String(ts||'');
+  if(!s)return'';
+  return s.replace('T',' ').replace(/(\.\d{3})?Z$/i,' UTC');
+}
+/** One-line X-axis subtitle under the chart (UTC window). */
+function xAxisRangeTitle(tsFirst,tsLast){
+  const A=String(tsFirst||''),Z=String(tsLast||'');
+  if(!A||!Z||A==='--'||Z==='--')return'';
+  const d0=A.slice(0,10),d1=Z.slice(0,10);
+  if(d0===d1)return d0+'  '+hhmm(A)+'\u2009\u2192\u2009'+hhmm(Z)+' UTC';
+  return A.slice(0,16).replace('T',' ')+'\u2009\u2192\u2009'+Z.slice(0,16).replace('T',' ')+' UTC';
+}
 function fmt(n,dp=0){if(n==null||isNaN(n))return'--';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return Number(n).toFixed(dp);}
 function fmtMs(ms){if(ms==null||isNaN(ms)||ms<=0)return'--';if(ms<1000)return Math.round(ms)+'ms';const s=ms/1000;return (s>=100?s.toFixed(0):s>=10?s.toFixed(1):s.toFixed(2)).replace(/\.0+$/,'').replace(/(\.\d)0$/,'$1')+'s';}
 /** Human-readable duration from a millisecond count (tables, tooltips). */
@@ -660,6 +731,137 @@ function refineInputStall(A,B,C){
   return{kind:'unknown',reason:'tail_inconclusive',pubD,lastCli};
 }
 
+/**
+ * Stall persistency tuning (matches perf export interval in sampleS).
+ * sustained: long single run or high coverage + medium run.
+ * transient (episodic): short longest run + low coverage, or short wall time + low coverage.
+ */
+const STALL_PERSIST={
+  sampleS:30,
+  sustainedMinRun:6,
+  sustainedCoverage:0.5,
+  sustainedMinRunWithCov:4,
+  transientMaxRun:2,
+  transientMaxCoverage:0.22,
+  transientCapS:90,
+  transientCovCap:0.3
+};
+const STALL_SAMPLE_S=STALL_PERSIST.sampleS;
+
+/** Aligned row count for A/B stall math (same component rows are co-exported). */
+function alignedStallLen(A,B){
+  if(A.length&&B.length)return Math.min(A.length,B.length);
+  return A.length||B.length||0;
+}
+
+/**
+ * Per-interval booleans matching the diagnosed stall layer (same thresholds as diagnoseLayer:
+ * deadlock OUT_ACTIVE&gt;0 &amp; Q_PCT&amp;ge;0.8; pipeline PIPE_ACTIVE&gt;0 &amp; OUT_ACTIVE=0;
+ * input = zero ack/fail for that row and not deadlock/pipeline-shaped).
+ */
+function stallLayerFlags(A,B,stallLayer){
+  const n=alignedStallLen(A,B);
+  if(!n||!stallLayer)return null;
+  const flags=new Array(n);
+  for(let i=0;i<n;i++){
+    const a=A[i]||{},b=B[i]||{};
+    const out=Number(a.OUT_ACTIVE)||0,pipe=Number(b.PIPE_ACTIVE)||0,qPct=Number(b.Q_PCT)||0;
+    const ack=Number(a.ACKED)||0,fail=Number(a.FAILED)||0;
+    const dead=out>0&&qPct>=0.8;
+    const pipeSt=pipe>0&&out===0;
+    if(stallLayer==='deadlock')flags[i]=dead;
+    else if(stallLayer==='pipeline')flags[i]=pipeSt;
+    else if(stallLayer==='input')flags[i]=ack===0&&fail===0&&!dead&&!pipeSt;
+    else flags[i]=false;
+  }
+  return flags;
+}
+
+/** Longest true run, coverage, whether the signature holds on the last sample, worst-span timestamps. */
+function persistFromFlags(flags,rowGetter){
+  const n=flags.length;
+  if(!n)return null;
+  let hits=0,run=0,best=0,bestStart=0,runStart=0;
+  for(let i=0;i<n;i++){
+    if(flags[i]){
+      hits++;
+      if(run===0)runStart=i;
+      run++;
+      if(run>best){best=run;bestStart=runStart;}
+    }else run=0;
+  }
+  const bestEnd=bestStart+best-1;
+  const tsOf=j=>{
+    const r=rowGetter(j);
+    const t=r&&r.TIMESTAMP;
+    return t?String(t):'';
+  };
+  return{
+    n,hits,coverage:hits/n,longestRun:best,longestStart:bestStart,longestEnd:bestEnd,
+    stillAtEnd:!!flags[n-1],
+    tsStart:tsOf(bestStart),tsEnd:tsOf(bestEnd)
+  };
+}
+
+/** sustained = long dwell or dominant coverage; transient = short blip; else moderate. */
+function persistTier(p){
+  if(!p||!p.n)return null;
+  const S=STALL_PERSIST;
+  const durS=p.longestRun*S.sampleS;
+  if(p.longestRun>=S.sustainedMinRun||(p.coverage>=S.sustainedCoverage&&p.longestRun>=S.sustainedMinRunWithCov))return'sustained';
+  if(p.longestRun<=S.transientMaxRun&&p.coverage<S.transientMaxCoverage)return'transient';
+  if(durS<=S.transientCapS&&p.coverage<S.transientCovCap)return'transient';
+  return'moderate';
+}
+
+function hhmmFromTs(ts){
+  const s=String(ts||'');
+  const m=s.match(/T(\d{2}:\d{2})/);
+  return m?m[1]:s.slice(11,16)||'\u2014';
+}
+
+function fmtDurMinSec(sec){
+  if(sec==null||isNaN(sec)||sec<0)return'\u2014';
+  if(sec<60)return Math.round(sec)+' s';
+  const m=Math.floor(sec/60), rs=Math.round(sec-m*60);
+  return m+' min'+(rs>0?' '+rs+' s':'');
+}
+
+/** HTML fragment for stall banner (wrapped in .sb-persist by caller). */
+function stallPersistHtml(stallLayer,p,tier){
+  if(!p||!p.hits)return'';
+  const spanCls=tier==='sustained'?'pt-sustained':tier==='transient'?'pt-transient':'pt-moderate';
+  const tag=tier==='sustained'?'Sustained':tier==='transient'?'Episodic':'Intermittent';
+  const longS=p.longestRun*STALL_PERSIST.sampleS;
+  const winS=p.n*STALL_PERSIST.sampleS;
+  const t0=hhmmFromTs(p.tsStart),t1=hhmmFromTs(p.tsEnd);
+  const span=t0&&t1&&t0!=='\u2014'?'Longest stretch '+fmtDurMinSec(longS)+' ('+t0+'\u2013'+t1+' UTC). ':'Longest stretch '+fmtDurMinSec(longS)+'. ';
+  const cov=Math.round(p.coverage*100);
+  const tail=p.stillAtEnd
+    ?'Signature still matched the last sample.'
+    :'Signature cleared before the last sample (check chart for recovery vs end-of-capture).';
+  const sig=stallLayer==='deadlock'?'Deadlock-shaped rows':stallLayer==='pipeline'?'Pipeline-stall-shaped rows':'Input-stall-shaped rows';
+  return'<span class="pt-tag '+spanCls+'">'+tag+'</span>'+sig+': '+cov+'% of '+p.n+' aligned samples (~'+fmtDurMinSec(winS)+'). '+span+tail;
+}
+
+function flowPersistText(opts){
+  const{isStalled,stallLayer,idleTailPattern,p,tier,totAck}=opts;
+  const ss=STALL_PERSIST.sampleS+'s';
+  if(isStalled&&idleTailPattern)
+    return'Latest gauges at window end. Idle / EOF tail pattern applies to the full capture when harvesters stayed up with no publishes &mdash; not a short spike.';
+  if(isStalled&&stallLayer&&p&&p.hits){
+    const tag=tier==='sustained'?'Sustained':tier==='transient'?'Episodic':'Intermittent';
+    const t0=hhmmFromTs(p.tsStart),t1=hhmmFromTs(p.tsEnd);
+    const worst=t0&&t1?' Worst span ~'+t0+'\u2013'+t1+' UTC.':'';
+    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. '+tag+' stall signature: '+Math.round(p.coverage*100)+'% of samples, longest run '+fmtDurMinSec(p.longestRun*STALL_PERSIST.sampleS)+'.'+worst+
+      (p.stillAtEnd?' Still matched at end.':' Cleared before end.')+
+      ' Use <i>Event flow by layer</i> for the full timeline.';
+  }
+  if(totAck>0)
+    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. Throughput present &mdash; chart below shows how pressure moved across layers over time.';
+  return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. For persistence of pressure vs one-sample noise, use <i>Event flow by layer</i> below.';
+}
+
 function resetAll(){
   Object.keys(DATA).forEach(k=>DATA[k]=null);
   ['A','B','C','D','E'].forEach(k=>{const s=document.getElementById('fs-'+k);s.classList.remove('ok');s.querySelector('.fs-name').textContent='not loaded';});
@@ -668,6 +870,7 @@ function resetAll(){
   Object.keys(CHARTS).forEach(k=>delete CHARTS[k]);
   document.getElementById('pg-dash').style.display='none';
   document.getElementById('pg-upload').style.display='block';
+  const fp=document.getElementById('flow-persist');if(fp)fp.innerHTML='';
   document.getElementById('hdr-status').textContent='no data loaded';
   document.getElementById('go-btn').disabled=true;
   document.getElementById('go-btn').textContent='Drop files to begin \u2192';
@@ -708,7 +911,9 @@ function renderComp(cid){
   const base=A.length?A:B.length?B:C.length?C:[];
   const tsFirst=base.length?base[0].TIMESTAMP:'--';
   const tsLast=base.length?base[base.length-1].TIMESTAMP:'--';
-  const labels=thin(base.map(r=>hhmm(r.TIMESTAMP)));
+  const xRangeDash=xAxisRangeTitle(tsFirst,tsLast);
+  const chartLabelsA=A.length?chartPlaceholderLabels(A.length):[];
+  const xTsA=A.map(r=>r.TIMESTAMP);
 
   document.getElementById('m-comp').textContent=cid;
   document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
@@ -720,6 +925,16 @@ function renderComp(cid){
   const stallLayer=isStalled?diagnoseLayer(A,B):null;
   const inputRefine=(isStalled&&stallLayer==='input')?refineInputStall(A,B,C):null;
   const idleTailPattern=inputRefine&&inputRefine.kind==='likely_idle_tail';
+
+  const stallFlags=!idleTailPattern&&isStalled&&stallLayer?stallLayerFlags(A,B,stallLayer):null;
+  const stallPersist=stallFlags?persistFromFlags(stallFlags,i=>A[i]||B[i]||{}):null;
+  const stallTier=stallPersist?persistTier(stallPersist):null;
+  const persistSb=!idleTailPattern&&stallPersist&&stallPersist.hits&&stallLayer
+    ?'<div class="sb-persist">'+stallPersistHtml(stallLayer,stallPersist,stallTier)+'</div>'
+    :'';
+  const persistDeadlockFallback=!idleTailPattern&&isStalled&&stallLayer==='deadlock'&&(!stallPersist||!stallPersist.hits)
+    ?'<div class="sb-persist"><span class="pt-tag pt-moderate">Timing offset</span>Stall classification uses window averages; no aligned sample had both OUT&gt;0 and queue \u226580% full in the same 30\u00a0s row. Use <i>Event flow by layer</i> to see whether in-flight events and queue pressure overlap in time.</div>'
+    :'';
 
   const lastA=A.length?A[A.length-1]:{},lastB=B.length?B[B.length-1]:{};
   const fbAct=Number(lastA.FB_ACTIVE||0);
@@ -737,11 +952,11 @@ function renderComp(cid){
     if(stallLayer==='deadlock'){
       banner.classList.add('mode-deadlock');sbTitle.className='sb-title mode-deadlock';
       sbTitle.innerHTML='&#128308; OUTPUT WORKER DEADLOCK \u2014 events sent but not acknowledged';
-      sbBody.innerHTML='OUT_ACTIVE='+fmt(outAct)+' events in-flight for ~'+winMin+' min with ACKED=0. Queue '+Math.round(qPct*100)+'% full ('+qFill+'/'+qMax+'). ES not responding within write timeout.<br>'+'Check: /_cat/thread_pool/write, bulk queue depth, circuit breakers, ILM rollover blocking.';
+      sbBody.innerHTML='OUT_ACTIVE='+fmt(outAct)+' events in-flight for ~'+winMin+' min with ACKED=0. Queue '+Math.round(qPct*100)+'% full ('+qFill+'/'+qMax+'). ES not responding within write timeout.<br>'+'Check: /_cat/thread_pool/write, bulk queue depth, circuit breakers, ILM rollover blocking.'+persistSb+persistDeadlockFallback;
     }else if(stallLayer==='pipeline'){
       banner.classList.add('mode-pipeline');sbTitle.className='sb-title mode-pipeline';
       sbTitle.innerHTML='&#128308; PIPELINE\u2192OUTPUT STALL \u2014 events queued but not reaching output';
-      sbBody.innerHTML='PIPE_ACTIVE='+fmt(pipeAct)+' events in pipeline, OUT_ACTIVE=0, ACKED=0 for ~'+winMin+' min.<br>Output worker is not consuming from the queue. Check output configuration and connection to ES/Logstash.';
+      sbBody.innerHTML='PIPE_ACTIVE='+fmt(pipeAct)+' events in pipeline, OUT_ACTIVE=0, ACKED=0 for ~'+winMin+' min.<br>Output worker is not consuming from the queue. Check output configuration and connection to ES/Logstash.'+persistSb;
     }else if(idleTailPattern){
       banner.classList.add('mode-idle');sbTitle.className='sb-title mode-idle';
       sbTitle.innerHTML='&#9201; ZERO OUTPUT THROUGHPUT \u2014 likely idle source (harvesters still tailing)';
@@ -751,34 +966,37 @@ function renderComp(cid){
         :'pipeline.events.published did not increase across table B, ';
       sbBody.innerHTML=conf+'HARV_RUNNING\u2248'+fmt(inputRefine.harvLast||0,0)+', '+pubLine+' FB_ACTIVE=0 across ~'+winMin+' min.<br>'+
         'Tailers are open at EOF waiting for new lines; this is often normal when the log writer is quiet. If you expected traffic, verify the correct paths and that the application is logging.<br>'+
-        'Beat uptime: '+beatH+'h.';
+        'Beat uptime: '+beatH+'h.'+
+        '<div class="sb-persist"><span class="pt-tag pt-moderate">Full window</span>Idle / EOF interpretation uses the whole capture (harvesters + publish deltas), not a single '+STALL_PERSIST.sampleS+'\u00a0s row.</div>';
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='input_buffer'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT BUFFER BACKLOG \u2014 events held in filebeat, not reaching pipeline';
       sbBody.innerHTML='FB_ACTIVE peaked at '+fmt(inputRefine.maxFb||0,0)+' across ~'+winMin+' min with no acks/fails. Harvesters may still be reading; check processors, pipeline blocking, or input-to-pipeline wiring.<br>'+
-        'Beat uptime: '+beatH+'h.';
+        'Beat uptime: '+beatH+'h.'+persistSb;
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='harvester_stopped'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT STALL \u2014 harvesters mostly not running';
       sbBody.innerHTML='HARV_RUNNING was 0 in ~'+Math.round((inputRefine.zeroFrac||0)*100)+'% of samples; no events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+
-        'Nothing is being tailed. Causes: no matching paths, permissions, rotation gap, FD limits, or misconfiguration. Check HARV_FILES and filebeat logs around '+String(tsFirst).slice(11,16)+' UTC.';
+        'Nothing is being tailed. Causes: no matching paths, permissions, rotation gap, FD limits, or misconfiguration. Check HARV_FILES and filebeat logs around '+String(tsFirst).slice(11,16)+' UTC.'+persistSb;
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='no_pipeline_clients_tail'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 pipeline.clients=0';
       sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min; pipeline.clients stayed 0 while throughput was silent. Inputs may not be wired to the publisher, or the beat is still starting.<br>'+
-        'Beat uptime: '+beatH+'h. Check agent policy and filebeat input logs.';
+        'Beat uptime: '+beatH+'h. Check agent policy and filebeat input logs.'+persistSb;
     }else{
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 beat alive but no events entering pipeline';
       sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+(B.length&&Number(lastB.CLIENTS||0)===0?'pipeline.clients=0 \u2014 inputs never opened a pipeline connection. ':'')+
         (C.length&&!idleTailPattern&&!C.some(r=>r.HARV_RUNNING!==''&&r.HARV_RUNNING!==undefined&&r.HARV_RUNNING!==null&&!isNaN(Number(r.HARV_RUNNING)))?
           'This export has no filebeat harvester columns in table C; re-run perf extraction with an updated script to distinguish idle tail vs stopped harvesters. ':'')+
-        'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.';
+        'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.'+persistSb;
     }
   }else banner.style.display='none';
 
   // PIPELINE FLOW DIAGRAM
   const fd=document.getElementById('flow-diagram');
+  const flowPersistEl=document.getElementById('flow-persist');
+  if(flowPersistEl)flowPersistEl.innerHTML=flowPersistText({isStalled,stallLayer,idleTailPattern,p:stallPersist,tier:stallTier,totAck});
   if(A.length||B.length){
     fd.style.display='block';
     const row=document.getElementById('flow-row');
@@ -798,7 +1016,7 @@ function renderComp(cid){
       <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">OUT_ACTIVE</div></div>
       <div class="flow-arrow"><div class="fa-line ${a3Cls}"></div><div class="fa-label ${a3Cls}">${a3Cls==='blocked'?'&#10006; ES not acking':a3Cls==='flowing'?'&#10004;':''}</div></div>
       <div class="flow-node"><div class="fn-label">Acked</div><div class="fn-val ${ackV.c}">${ackV.v}</div><div class="fn-sub">this window</div></div>`;
-  }else fd.style.display='none';
+  }else{fd.style.display='none';if(flowPersistEl)flowPersistEl.innerHTML='';}
 
   // HEALTH GRID
   if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
@@ -828,11 +1046,25 @@ function renderComp(cid){
   // ── OUTPUT / PIPELINE ISSUES ──────────────────────────
   if(A.length){
     // Deadlock: stall banner doesn't cover this mode, so keep the alert
-    if(isStalled&&stallLayer==='deadlock')
-      critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',
-        'OUT_ACTIVE='+fmt(outAct)+' sustained with ACKED=0 across ~'+fmt(A.length*30/60,0)+' min. '+
+    if(isStalled&&stallLayer==='deadlock'){
+      const ephem=stallTier==='transient';
+      const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
+      const body='OUT_ACTIVE='+fmt(outAct)+' with ACKED=0 across ~'+winM+' min. '+
+        (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
         'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
-        '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.']);
+        '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.';
+      if(ephem)warnAlerts.push(['warn','Output worker deadlock (episodic signature)',body]);
+      else critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',body]);
+    }
+    if(isStalled&&stallLayer==='pipeline'){
+      const ephem=stallTier==='transient';
+      const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
+      const body='PIPE_ACTIVE='+fmt(pipeAct)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+' min. '+
+        (ephem?'Per-interval pipeline\u2192output stall signature was brief; re-capture if you need proof of a chronic drain issue. ':'')+
+        'Events are queued in the pipeline but the output worker is not taking them. Check output config, connectivity to ES/Logstash, and output worker health in beat logs.';
+      if(ephem)warnAlerts.push(['warn','Pipeline\u2192output stall (episodic signature)',body]);
+      else critAlerts.push(['error','Pipeline\u2192output stall \u2014 queue not reaching output',body]);
+    }
     if(totAck===0&&totFail===0&&A.length>0&&A.length<=5)
       warnAlerts.push(['warn','Zero throughput in short capture','Only '+A.length+' sample(s); stall classification needs more rows. Re-capture if the quiet period continues. May be startup, idle source, or blocked input.']);
 
@@ -1064,107 +1296,114 @@ function renderComp(cid){
   if(B.length&&allZero(B,'CLIENTS')&&allZero(B,'PIPE_ACTIVE'))markCard('cc-pipe','stalled');
 
   // CHARTS
+  const lineChartXOpts={xTimestamps:xTsA,xRangeTitle:xRangeDash,xAxisTickCount:18};
   if(A.length){
-    mkLine('ch-events',labels,[
+    mkLine('ch-events',chartLabelsA,[
       {label:'ACKED',data:A.map(r=>Number(r.ACKED)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
       {label:'FAILED',data:A.map(r=>Number(r.FAILED)||0),borderColor:'#ffb830'},
       {label:'DROPPED',data:A.map(r=>Number(r.DROPPED)||0),borderColor:'#ff4757'},
-    ],null,{yFormat:'compactNum'});
-    mkLine('ch-lat',labels,[
+    ],null,{yFormat:'compactNum',...lineChartXOpts});
+    mkLine('ch-lat',chartLabelsA,[
       {label:'MEAN',data:A.map(r=>Number(r.LAT_MEAN)||0),borderColor:'#00d4ff'},
       {label:'P95',data:A.map(r=>Number(r.LAT_P95)||0),borderColor:'#7c5cfc'},
       {label:'P99',data:A.map(r=>Number(r.LAT_P99)||0),borderColor:'#ffb830'},
       {label:'P999',data:A.map(r=>Number(r.LAT_P999)||0),borderColor:'#ff2d55',borderDash:[5,3]},
       {label:'MAX',data:A.map(r=>Number(r.LAT_MAX)||0),borderColor:'#ff4757',borderDash:[3,3],borderWidth:1},
-    ],null,{yFormat:'durationMs'});
-    mkLine('ch-io',labels,[
+    ],null,{yFormat:'durationMs',...lineChartXOpts});
+    mkLine('ch-io',chartLabelsA,[
       {label:'WRITE_B',data:A.map(r=>Number(r.WRITE_B)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'READ_B',data:A.map(r=>Number(r.READ_B)||0),borderColor:'#7c5cfc'},
-    ],null,{yFormat:'bytes'});
+    ],null,{yFormat:'bytes',...lineChartXOpts});
   }
-  if(E.length)
-    mkLine('ch-err',thin(E.map(r=>hhmm(r.TIMESTAMP))),[
+  if(E.length){
+    const eTs=E.map(r=>r.TIMESTAMP);
+    mkLine('ch-err',chartPlaceholderLabels(E.length),[
       {label:'429_%',data:E.map(r=>Number(r['429_%'])||0),borderColor:'#ffb830'},
       {label:'DROP_%',data:E.map(r=>Number(r['DROP_%'])||0),borderColor:'#ff4757'},
       {label:'DUPE_%',data:E.map(r=>Number(r['DUPE_%'])||0),borderColor:'#7c5cfc'},
       {label:'RETRY_%',data:E.map(r=>Number(r['RETRY_%'])||0),borderColor:'#00c875',borderDash:[3,3],borderWidth:1},
-    ]);
+    ],null,{xTimestamps:eTs,xRangeTitle:xAxisRangeTitle(eTs[0],eTs[eTs.length-1]),xAxisTickCount:18});
+  }
 
   // Layer flow chart — key stall diagnosis chart
   if(A.length||B.length){
-    const fl=thin(A.length?A.map(r=>hhmm(r.TIMESTAMP)):B.map(r=>hhmm(r.TIMESTAMP)));
+    const layerSrc=A.length?A:B;
+    const layerTs=layerSrc.map(r=>r.TIMESTAMP);
+    const layerLab=chartPlaceholderLabels(layerTs.length);
+    const layerRange=xAxisRangeTitle(layerTs[0],layerTs[layerTs.length-1]);
+    const layerXOpts={xTimestamps:layerTs,xRangeTitle:layerRange,xAxisTickCount:18};
     const ds=[];
     if(A.length){
       ds.push({label:'FB_ACTIVE (input buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true});
       ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true});
     }
     if(B.length)ds.push({label:'PIPE_ACTIVE (pipeline)',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'});
-    mkLine('ch-layer',fl,ds,null,{maintainAspectRatio:false,yFormat:'compactNum'});
+    mkLine('ch-layer',layerLab,ds,null,{maintainAspectRatio:false,yFormat:'compactNum',...layerXOpts});
   }
 
   if(B.length){
-    const bl=thin(B.map(r=>hhmm(r.TIMESTAMP)));
-    mkLine('ch-q',bl,[
+    const bTs=B.map(r=>r.TIMESTAMP);
+    const bLab=chartPlaceholderLabels(B.length);
+    const bRange=xAxisRangeTitle(bTs[0],bTs[bTs.length-1]);
+    const bXOpts={xTimestamps:bTs,xRangeTitle:bRange,xAxisTickCount:18};
+    mkLine('ch-q',bLab,[
       {label:'Q_FILLED',data:B.map(r=>Number(r.Q_FILLED)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'Q_PCT %',data:B.map(r=>(Number(r.Q_PCT)||0)*100),borderColor:'#ff4757',yAxisID:'y2'},
-    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{maintainAspectRatio:false,yFormat:'compactNum'});
-    mkLine('ch-pipe',bl,[
+    ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{maintainAspectRatio:false,yFormat:'compactNum',...bXOpts});
+    mkLine('ch-pipe',bLab,[
       {label:'CLIENTS',data:B.map(r=>Number(r.CLIENTS)||0),borderColor:'#00c875'},
       {label:'PIPE_ACTIVE',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'},
       {label:'RETRY',data:B.map(r=>Number(r.RETRY)||0),borderColor:'#ffb830'},
       {label:'MODULES',data:B.map(r=>Number(r.MODULES)||0),borderColor:'#7c5cfc',borderDash:[4,3]},
-    ],null,{maintainAspectRatio:false,yFormat:'compactNum'});
+    ],null,{maintainAspectRatio:false,yFormat:'compactNum',...bXOpts});
   }
 
   if(C.length){
-    const cl=thin(C.map(r=>hhmm(r.TIMESTAMP)));
-    mkLine('ch-mem',cl,[
+    const cTs=C.map(r=>r.TIMESTAMP);
+    const cLab=chartPlaceholderLabels(C.length);
+    const cRange=xAxisRangeTitle(cTs[0],cTs[cTs.length-1]);
+    const cXOpts={xTimestamps:cTs,xRangeTitle:cRange,xAxisTickCount:18};
+    mkLine('ch-mem',cLab,[
       {label:'MEM_ALLOC_MB',data:C.map(r=>Number(r.MEM_ALLOC_MB)||0),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.05)',fill:true},
       {label:'RSS_MB',data:C.map(r=>Number(r.RSS_MB)||0),borderColor:'#7c5cfc',backgroundColor:'rgba(124,92,252,.04)',fill:true},
-    ]);
-    mkLine('ch-cpu',cl,[
+    ],null,{...cXOpts});
+    mkLine('ch-cpu',cLab,[
       {label:'CPU_TOTAL_ms',data:C.map(r=>Number(r.CPU_TOTAL_ms)||0),borderColor:'#ffb830'},
       {label:'CPU_USER_ms',data:C.map(r=>Number(r.CPU_USER_ms)||0),borderColor:'#00c875'},
       {label:'CPU_SYS_ms',data:C.map(r=>Number(r.CPU_SYS_ms)||0),borderColor:'#ff6b6b'},
-    ],null,{yFormat:'durationMs'});
+    ],null,{yFormat:'durationMs',...cXOpts});
+    const harvRunVals2=C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
+    if(harvRunVals2.length>0){
+      document.getElementById('cc-harv').style.display='';
+      mkLine('ch-harv',cLab,[
+        {label:'HARV_RUNNING (active)',data:C.map(r=>Number(r.HARV_RUNNING)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
+        {label:'HARV_FILES (open FDs)',data:C.map(r=>Number(r.HARV_FILES)||0),borderColor:'#7c5cfc'},
+      ],null,{yFormat:'compactNum',...cXOpts});
+    }
+    const fdOpenVals2=C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
+    const fdLimitVals2=C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
+    if(fdOpenVals2.length>0){
+      document.getElementById('cc-fd').style.display='';
+      const fdPct=C.map((r,i)=>{
+        const lim=Number(r.FD_LIMIT)||0;
+        return lim>0?Math.round(Number(r.FD_OPEN)/lim*100):0;
+      });
+      mkLine('ch-fd',cLab,[
+        {label:'FD_OPEN',data:C.map(r=>Number(r.FD_OPEN)||0),borderColor:'#ffb830',backgroundColor:'rgba(255,184,48,.05)',fill:true},
+        {label:'FD_LIMIT',data:C.map(r=>Number(r.FD_LIMIT)||0),borderColor:'#ff4757',borderDash:[4,3]},
+        {label:'Usage %',data:fdPct,borderColor:'#ff2d55',yAxisID:'y2'},
+      ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}},{...cXOpts});
+    }
   }
 
   // Transport errors chart — always render when A available
   if(A.length){
     const hasErrs = !allZero(A,'WRITE_ERR')||!allZero(A,'READ_ERR');
     if(!hasErrs) markCard('cc-ioerr','stalled');
-    mkLine('ch-ioerr',labels,[
+    mkLine('ch-ioerr',chartLabelsA,[
       {label:'WRITE_ERR',data:A.map(r=>Number(r.WRITE_ERR)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true},
       {label:'READ_ERR', data:A.map(r=>Number(r.READ_ERR)||0), borderColor:'#ffb830'},
-    ],null,{yFormat:'compactNum'});
-  }
-
-  // Harvester + FD charts — only shown when data is present (filebeat only)
-  if(C.length){
-    const cl=thin(C.map(r=>hhmm(r.TIMESTAMP)));
-    const harvRunVals2 = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
-    if(harvRunVals2.length > 0){
-      document.getElementById('cc-harv').style.display='';
-      mkLine('ch-harv',cl,[
-        {label:'HARV_RUNNING (active)',data:C.map(r=>Number(r.HARV_RUNNING)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true},
-        {label:'HARV_FILES (open FDs)', data:C.map(r=>Number(r.HARV_FILES)||0), borderColor:'#7c5cfc'},
-      ],null,{yFormat:'compactNum'});
-    }
-    const fdOpenVals2 = C.map(r=>Number(r.FD_OPEN)).filter(v=>v>0);
-    const fdLimitVals2 = C.map(r=>Number(r.FD_LIMIT)).filter(v=>v>0);
-    if(fdOpenVals2.length > 0){
-      document.getElementById('cc-fd').style.display='';
-      // Dual-axis: raw counts on left, % utilisation on right
-      const fdPct = C.map((r,i)=>{
-        const lim=Number(r.FD_LIMIT)||0;
-        return lim>0 ? Math.round(Number(r.FD_OPEN)/lim*100) : 0;
-      });
-      mkLine('ch-fd',cl,[
-        {label:'FD_OPEN',  data:C.map(r=>Number(r.FD_OPEN)||0),  borderColor:'#ffb830',backgroundColor:'rgba(255,184,48,.05)',fill:true},
-        {label:'FD_LIMIT', data:C.map(r=>Number(r.FD_LIMIT)||0), borderColor:'#ff4757',borderDash:[4,3]},
-        {label:'Usage %',  data:fdPct, borderColor:'#ff2d55', yAxisID:'y2'},
-      ],{y2:{position:'right',beginAtZero:true,min:0,max:100,grid:{drawOnChartArea:false},ticks:{maxTicksLimit:5,callback:v=>v+'%'}}});
-    }
+    ],null,{yFormat:'compactNum',...lineChartXOpts});
   }
 
   // INPUT TABLE — D is scoped by selected component; extractor only emits inputs with histogram.count>0 (see elastic-agent-perf.sh)
