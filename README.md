@@ -4,7 +4,7 @@ Analyze Elastic Agent diagnostic data with a single browser dashboard: `input-an
 
 It supports both:
 
-- raw diagnostic NDJSON files (`elastic-agent-*.ndjson`), and
+- raw NDJSON log files (`elastic-agent-*.ndjson`), and
 - extracted A-E TSV outputs from `elastic-agent-perf.sh`.
 
 The page auto-detects the input format and renders the same charts, health cards, and stall diagnostics.
