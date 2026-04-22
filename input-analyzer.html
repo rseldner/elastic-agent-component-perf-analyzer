@@ -154,10 +154,10 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .sb-body{font-size:12px;color:var(--mid);line-height:1.8;font-family:'IBM Plex Mono',monospace}
 .sb-persist{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--text);line-height:1.75}
 #stall-banner.mode-idle .sb-persist{border-top-color:rgba(0,212,255,.15)}
-.sb-persist .pt-tag{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-right:8px;vertical-align:middle;white-space:nowrap}
-.sb-persist .pt-sustained{background:rgba(255,45,85,.18);color:#ffb3bd}
-.sb-persist .pt-transient{background:rgba(126,200,227,.12);color:var(--info)}
-.sb-persist .pt-moderate{background:rgba(255,184,48,.12);color:var(--warn)}
+.sb-persist .pt-tag,.flow-persist .pt-tag{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-right:8px;vertical-align:middle;white-space:nowrap}
+.sb-persist .pt-sustained,.flow-persist .pt-sustained{background:rgba(255,45,85,.18);color:#ffb3bd}
+.sb-persist .pt-transient,.flow-persist .pt-transient{background:rgba(126,200,227,.12);color:var(--info)}
+.sb-persist .pt-moderate,.flow-persist .pt-moderate{background:rgba(255,184,48,.12);color:var(--warn)}
 #flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px}
 .flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
 .flow-persist{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);line-height:1.65;margin-bottom:14px;max-width:96ch}
@@ -184,19 +184,33 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .hc.warn{border-color:rgba(255,184,48,.3);background:rgba(255,184,48,.05)}
 .hc.err{border-color:rgba(255,71,87,.3);background:rgba(255,71,87,.05)}
 .hc.crit{border-color:rgba(255,45,85,.4);background:rgba(255,45,85,.07)}
-#alerts{display:flex;flex-direction:column;gap:7px;margin-bottom:22px}
-.al{display:flex;gap:11px;padding:11px 15px;border-radius:6px;border-left:3px solid;font-size:13px}
-.al.crit{background:rgba(255,45,85,.07);border-color:var(--crit)}
-.al.error{background:rgba(255,71,87,.07);border-color:var(--err)}
-.al.warn{background:rgba(255,184,48,.07);border-color:var(--warn)}
-.al.ok{background:rgba(0,200,117,.07);border-color:var(--ok)}
-.al.info{background:rgba(0,212,255,.05);border-color:var(--accent)}
-.al-ico{font-size:15px;flex-shrink:0;padding-top:1px}
-.al-title{font-weight:600;margin-bottom:1px}
+#alerts{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+.al{display:flex;gap:8px;align-items:flex-start;padding:6px 10px;border-radius:4px;border-left:3px solid;font-size:12px;line-height:1.35}
+.al.crit{background:rgba(255,45,85,.05);border-color:var(--crit)}
+.al.error{background:rgba(255,71,87,.05);border-color:var(--err)}
+.al.warn{background:rgba(255,184,48,.04);border-color:var(--warn)}
+.al.ok{background:rgba(0,200,117,.04);border-color:var(--ok)}
+.al.info{background:rgba(0,212,255,.04);border-color:var(--accent)}
+.al-sev{flex-shrink:0;width:7px;height:7px;border-radius:50%;margin-top:3px;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.al.crit .al-sev{background:var(--crit);box-shadow:0 0 0 1px rgba(255,45,85,.3)}
+.al.error .al-sev{background:var(--err);box-shadow:0 0 0 1px rgba(255,71,87,.25)}
+.al.warn .al-sev{background:var(--warn);box-shadow:0 0 0 1px rgba(255,184,48,.2)}
+.al.ok .al-sev{background:var(--ok);box-shadow:0 0 0 1px rgba(0,200,117,.2)}
+.al.info .al-sev{background:var(--accent);box-shadow:0 0 0 1px rgba(0,212,255,.2)}
+.al-txt{min-width:0;flex:1}
+.al-title{font-weight:600;font-size:12px;line-height:1.3;margin-bottom:2px}
 .al.crit .al-title{color:var(--crit)} .al.error .al-title{color:var(--err)}
 .al.warn .al-title{color:var(--warn)} .al.ok .al-title{color:var(--ok)}
 .al.info .al-title{color:var(--info)}
-.al-body{font-size:12px;color:var(--mid);font-family:'IBM Plex Mono',monospace}
+.al-body{font-size:11px;color:var(--mid);font-family:'IBM Plex Mono',monospace;line-height:1.45;word-wrap:break-word}
+/* Single-line "all clear" to avoid a tall empty-state block */
+.al.ok .al-txt{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:0.35em;row-gap:0.1em}
+.al.ok .al-title{margin-bottom:0}
+.al.ok .al-title::after{content:'\a0\2014\a0';font-weight:500;color:var(--dim);font-size:11px}
+.al.ok .al-body{display:inline}
+.al-nested .al-sev{display:none}
+.al-nested .al-txt .al-title{font-size:11.5px}
+.al-nested .al-body{font-size:10.5px}
 .stat-wrap{display:flex;flex-direction:column;gap:14px;margin-bottom:22px}
 .stat-group-hd{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 7px 2px}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px}
@@ -221,28 +235,37 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .sc-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--tip-bg)}
 .sc:hover .sc-tip{display:block}
 /* Collapsible alert group */
-.al-group{margin-bottom:7px}
-.al-group-hd{display:flex;align-items:center;gap:10px;padding:10px 15px;border-radius:6px;border-left:3px solid;cursor:pointer;user-select:none;font-size:13px}
-.al-group-hd:hover{filter:brightness(1.1)}
-.al-group-hd.crit {background:rgba(255,45,85,.07);border-color:var(--crit)}
-.al-group-hd.error{background:rgba(255,71,87,.07);border-color:var(--err)}
-.al-group-hd.warn {background:rgba(255,184,48,.07);border-color:var(--warn)}
-.al-group-hd.info {background:rgba(0,212,255,.05);border-color:var(--accent)}
-.al-group-hd.ok   {background:rgba(0,200,117,.07);border-color:var(--ok)}
-.al-group-title{flex:1;font-weight:600}
+.al-group{margin-bottom:2px}
+.al-group-hd{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:4px;border-left:3px solid;cursor:pointer;user-select:none;font-size:12px;min-height:0;line-height:1.3}
+.al-group-hd:hover{filter:brightness(1.08)}
+.al-group-hd.open{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.al-group-hd.crit {background:rgba(255,45,85,.05);border-color:var(--crit)}
+.al-group-hd.error{background:rgba(255,71,87,.05);border-color:var(--err)}
+.al-group-hd.warn {background:rgba(255,184,48,.04);border-color:var(--warn)}
+.al-group-hd.info {background:rgba(0,212,255,.04);border-color:var(--accent)}
+.al-group-hd.ok   {background:rgba(0,200,117,.04);border-color:var(--ok)}
+.al-group-hd .al-sev{margin-top:0;align-self:center}
+.al-group-hd.crit .al-sev{background:var(--crit);box-shadow:0 0 0 1px rgba(255,45,85,.3)}
+.al-group-hd.error .al-sev{background:var(--err);box-shadow:0 0 0 1px rgba(255,71,87,.25)}
+.al-group-hd.warn .al-sev{background:var(--warn);box-shadow:0 0 0 1px rgba(255,184,48,.2)}
+.al-group-hd.info .al-sev{background:var(--accent);box-shadow:0 0 0 1px rgba(0,212,255,.2)}
+.al-group-hd.ok .al-sev{background:var(--ok);box-shadow:0 0 0 1px rgba(0,200,117,.2)}
+.al-group-title{flex:1;font-weight:600;min-width:0}
 .al-group-hd.crit  .al-group-title{color:var(--crit)}
 .al-group-hd.error .al-group-title{color:var(--err)}
 .al-group-hd.warn  .al-group-title{color:var(--warn)}
 .al-group-hd.info  .al-group-title{color:var(--info)}
 .al-group-hd.ok    .al-group-title{color:var(--ok)}
-.al-group-count{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:10px;color:var(--mid)}
-.al-group-chevron{font-size:10px;color:var(--dim);transition:transform .2s}
+.al-group-count{font-family:'IBM Plex Mono',monospace;font-size:9px;background:rgba(255,255,255,.05);padding:1px 6px;border-radius:8px;color:var(--mid);white-space:nowrap}
+.al-group-chevron{font-size:8px;color:var(--dim);flex-shrink:0;transition:transform .2s;margin-left:1px}
 .al-group-hd.open .al-group-chevron{transform:rotate(180deg)}
-.al-group-body{display:none;padding:2px 0 0 0}
+.al-group-body{display:none;padding:0;margin:0;border:1px solid var(--bdr);border-top:none;border-radius:0 0 4px 4px;background:rgba(0,0,0,.15)}
 .al-group-body.open{display:block}
-.al-group-body .al{border-radius:0;border-left-width:2px;margin-bottom:1px}
-.al-group-body .al:first-child{border-radius:0 0 0 0}
-.al-group-body .al:last-child{border-radius:0 0 4px 4px}
+.al-group-body .al.al-nested{border-radius:0;border-left-width:2px;margin:0;border-top:1px solid var(--bdr);background:transparent}
+.al-group-body .al.al-nested:first-child{border-top:none}
+.al-group-body .al.al-nested:last-child{border-radius:0 0 3px 3px}
+.al-sec-hd{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:6px 10px 4px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--bdr);font-family:'IBM Plex Mono',monospace}
+.al-group-body .al-sec-hd + .al-nested{border-top:none}
 .sec{margin-bottom:26px}
 .sec-hd{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:11px;display:flex;align-items:center;gap:9px}
 .sec-hd::after{content:'';flex:1;height:1px;background:var(--bdr)}
@@ -978,24 +1001,43 @@ const STAT_TIPS = {
 };
 
 function mkAlert(level,title,body,container){
-  const ico={crit:'&#128308;',error:'&#128992;',warn:'&#128993;',ok:'&#128994;',info:'&#128998;'};
-  const d=document.createElement('div');d.className='al '+level;
-  d.innerHTML=`<span class="al-ico">${ico[level]||'&#9679;'}</span><div><div class="al-title">${title}</div><div class="al-body">${body}</div></div>`;
+  const d=document.createElement('div');
+  d.className='al '+level+(container?' al-nested':'');
+  d.innerHTML=`<span class="al-sev" aria-hidden="true"></span><div class="al-txt"><div class="al-title">${title}</div><div class="al-body">${body}</div></div>`;
   (container||document.getElementById('alerts')).appendChild(d);
 }
 
 // mkAlertGroup — creates a collapsible group header that wraps multiple alerts
 // Returns the body element to append child alerts into
 function mkAlertGroup(level,title,items,openByDefault){
-  const ico={crit:'&#128308;',error:'&#128992;',warn:'&#128993;',ok:'&#128994;',info:'&#128998;'};
   const wrap=document.createElement('div');wrap.className='al-group';
   const hd=document.createElement('div');hd.className='al-group-hd '+level+(openByDefault?' open':'');
-  hd.innerHTML=`<span class="al-ico">${ico[level]||'&#9679;'}</span><div class="al-group-title">${title}</div><span class="al-group-count">${items}</span><span class="al-group-chevron">&#9660;</span>`;
+  hd.innerHTML=`<span class="al-sev" aria-hidden="true"></span><div class="al-group-title">${title}</div><span class="al-group-count">${items}</span><span class="al-group-chevron">&#9660;</span>`;
   const body=document.createElement('div');body.className='al-group-body'+(openByDefault?' open':'');
   hd.onclick=()=>{hd.classList.toggle('open');body.classList.toggle('open');};
   wrap.appendChild(hd);wrap.appendChild(body);
   document.getElementById('alerts').appendChild(wrap);
   return body;
+}
+
+function mkAlertSecLabel(text,container){
+  const d=document.createElement('div');
+  d.className='al-sec-hd';
+  d.textContent=text;
+  container.appendChild(d);
+}
+
+function buildIssuesGroupTitle(nSevere,nWarn){
+  if(nSevere&&nWarn)
+    return'Issues \u2014 '+nSevere+' severe \u00b7 '+nWarn+(nWarn===1?' warning':' warnings');
+  if(nSevere)
+    return'Issues \u2014 '+nSevere+(nSevere===1?' severe issue':' severe issues');
+  return'Issues \u2014 '+nWarn+(nWarn===1?' warning':' warnings');
+}
+function issuesGroupTopLevel(critA){
+  if(critA.some(a=>a[0]==='crit'))return'crit';
+  if(critA.length)return'error';
+  return'warn';
 }
 
 let _statTargetRow=null;
@@ -1203,6 +1245,8 @@ function flowPersistText(opts){
   const ss=STALL_PERSIST.sampleS+'s';
   if(isStalled&&idleTailPattern)
     return'Latest gauges at window end. Idle / EOF tail pattern applies to the full capture when harvesters stayed up with no publishes &mdash; not a short spike.';
+  if(isStalled&&stallLayer==='deadlock'&&(!p||!p.hits)&&!idleTailPattern)
+    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. <span class="pt-tag pt-moderate">Timing offset</span> Stall classification uses window averages; no aligned sample had both OUT&gt;0 and queue \u226580% full in the same 30\u00a0s row. Use <i>Event flow by layer</i> to see whether in-flight events and queue pressure overlap in time.';
   if(isStalled&&stallLayer&&p&&p.hits){
     const tag=tier==='sustained'?'Sustained':tier==='transient'?'Episodic':'Intermittent';
     const t0=hhmmFromTs(p.tsStart),t1=hhmmFromTs(p.tsEnd);
@@ -1291,9 +1335,6 @@ function renderComp(cid){
   const persistSb=!idleTailPattern&&stallPersist&&stallPersist.hits&&stallLayer
     ?'<div class="sb-persist">'+stallPersistHtml(stallLayer,stallPersist,stallTier)+'</div>'
     :'';
-  const persistDeadlockFallback=!idleTailPattern&&isStalled&&stallLayer==='deadlock'&&(!stallPersist||!stallPersist.hits)
-    ?'<div class="sb-persist"><span class="pt-tag pt-moderate">Timing offset</span>Stall classification uses window averages; no aligned sample had both OUT&gt;0 and queue \u226580% full in the same 30\u00a0s row. Use <i>Event flow by layer</i> to see whether in-flight events and queue pressure overlap in time.</div>'
-    :'';
 
   const lastA=A.length?A[A.length-1]:{},lastB=B.length?B[B.length-1]:{};
   const fbAct=Number(lastA.FB_ACTIVE||0);
@@ -1301,22 +1342,20 @@ function renderComp(cid){
   const pipeAct=Number(lastB.PIPE_ACTIVE||0);
   const qFill=Number(lastB.Q_FILLED||0),qMax=Number(lastB.Q_MAX||3200),qPct=Number(lastB.Q_PCT||0);
 
-  // STALL BANNER
+  // STALL BANNER (deadlock / pipeline: same diagnosis as Issues list + event-flow blurb — hide banner to avoid duplicate)
   const banner=document.getElementById('stall-banner');
   const sbTitle=document.getElementById('sb-title'),sbBody=document.getElementById('sb-body');
   if(isStalled&&stallLayer){
-    banner.style.display='block';banner.className='';
-    const beatH=C.length?fmt((Number(C[0].UPTIME_s)||0)/3600,1):'?';
-    const winMin=fmt(A.length*30/60,0);
-    if(stallLayer==='deadlock'){
-      banner.classList.add('mode-deadlock');sbTitle.className='sb-title mode-deadlock';
-      sbTitle.innerHTML='&#128308; OUTPUT WORKER DEADLOCK \u2014 events sent but not acknowledged';
-      sbBody.innerHTML='OUT_ACTIVE='+fmt(outAct)+' events in-flight for ~'+winMin+' min with ACKED=0. Queue '+Math.round(qPct*100)+'% full ('+qFill+'/'+qMax+'). ES not responding within write timeout.<br>'+'Check: /_cat/thread_pool/write, bulk queue depth, circuit breakers, ILM rollover blocking.'+persistSb+persistDeadlockFallback;
-    }else if(stallLayer==='pipeline'){
-      banner.classList.add('mode-pipeline');sbTitle.className='sb-title mode-pipeline';
-      sbTitle.innerHTML='&#128308; PIPELINE\u2192OUTPUT STALL \u2014 events queued but not reaching output';
-      sbBody.innerHTML='PIPE_ACTIVE='+fmt(pipeAct)+' events in pipeline, OUT_ACTIVE=0, ACKED=0 for ~'+winMin+' min.<br>Output worker is not consuming from the queue. Check output configuration and connection to ES/Logstash.'+persistSb;
-    }else if(idleTailPattern){
+    banner.className='';
+    if(stallLayer==='deadlock'||stallLayer==='pipeline'){
+      banner.style.display='none';
+      sbTitle.textContent='';
+      sbBody.innerHTML='';
+    }else{
+      banner.style.display='block';
+      const beatH=C.length?fmt((Number(C[0].UPTIME_s)||0)/3600,1):'?';
+      const winMin=fmt(A.length*30/60,0);
+      if(idleTailPattern){
       banner.classList.add('mode-idle');sbTitle.className='sb-title mode-idle';
       sbTitle.innerHTML='&#9201; ZERO OUTPUT THROUGHPUT \u2014 likely idle source (harvesters still tailing)';
       const conf=inputRefine.confidence==='high'?'High confidence: ':inputRefine.confidence==='medium'?'Medium confidence: ':'Low confidence (few harvester samples or missing PUBLISHED deltas): ';
@@ -1349,6 +1388,7 @@ function renderComp(cid){
         (C.length&&!idleTailPattern&&!C.some(r=>r.HARV_RUNNING!==''&&r.HARV_RUNNING!==undefined&&r.HARV_RUNNING!==null&&!isNaN(Number(r.HARV_RUNNING)))?
           'This export has no filebeat harvester columns in table C; re-run perf extraction with an updated script to distinguish idle tail vs stopped harvesters. ':'')+
         'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.'+persistSb;
+    }
     }
   }else banner.style.display='none';
 
@@ -1398,7 +1438,8 @@ function renderComp(cid){
   // ─ Principle: stall banner already states the primary stall facts.
   //   Alerts focus on actionable specifics not visible elsewhere.
   //   Redundant info alerts are suppressed in favour of stat card badges/tooltips.
-  //   Related alerts are grouped under a collapsible header.
+  //   All non-info alerts render in a single "Issues" group (Severe | Warnings) when 2+ items;
+  //   drop stall duplicate alerts (e.g. queue 100% when deadlock or pipeline output stall is already reported).
 
   const critAlerts=[], warnAlerts=[], infoAlerts=[];
 
@@ -1461,7 +1502,8 @@ function renderComp(cid){
         'pipeline.clients=0 across all '+B.length+' intervals. '+(Number(lastB.MODULES)||0)+' modules configured but none publishing.']);
 
     const qFull=B.filter(r=>(Number(r.Q_PCT)||0)>=1).length;
-    if(qFull>B.length*0.5)
+    // Replaces redundant queue alert when a stall issue already names deadlock / pipeline\u2192output
+    if(qFull>B.length*0.5&&!(isStalled&&(stallLayer==='deadlock'||stallLayer==='pipeline')))
       critAlerts.push(['error','Queue saturated \u2014 '+Math.round(qFull/B.length*100)+'% of intervals at 100%',
         'Q_FILLED=Q_MAX in '+qFull+'/'+B.length+' windows. '+(stallLayer==='deadlock'?'Combined with OUT_ACTIVE>0 and ACKED=0: confirms output worker deadlock.':'Increase queue.mem.events or add output workers.')]);
     else if(qFull>0)
@@ -1557,31 +1599,23 @@ function renderComp(cid){
   }
 
   // ── RENDER ────────────────────────────────────────────
-  // Critical alerts: grouped if >1, otherwise flat
-  if(critAlerts.length===0&&warnAlerts.length===0){
+  // One expandable "Issues" list (no separate top card + "more" group = no doubled criticals).
+  const nIss=critAlerts.length+warnAlerts.length;
+  if(nIss===0)
     mkAlert('ok','No issues detected','All monitored thresholds within normal range.');
+  else if(nIss===1){
+    const a=critAlerts.length?critAlerts[0]:warnAlerts[0];
+    mkAlert(a[0],a[1],a[2]);
   } else {
-    if(critAlerts.length===1){
-      mkAlert(critAlerts[0][0],critAlerts[0][1],critAlerts[0][2]);
-    } else if(critAlerts.length>1){
-      // Leading alert shown flat (most prominent), rest grouped
-      mkAlert(critAlerts[0][0],critAlerts[0][1],critAlerts[0][2]);
-      if(critAlerts.length>1){
-        const topLevel=critAlerts.slice(1).some(a=>a[0]==='crit')?'crit':'error';
-        const grp=mkAlertGroup(topLevel,critAlerts.length-1+' more issue'+(critAlerts.length>2?'s':''),critAlerts.length-1+' items',false);
-        critAlerts.slice(1).forEach(a=>mkAlert(a[0],a[1],a[2],grp));
-      }
-    }
-    if(warnAlerts.length===1){
-      mkAlert(warnAlerts[0][0],warnAlerts[0][1],warnAlerts[0][2]);
-    } else if(warnAlerts.length>1){
-      const grp=mkAlertGroup('warn',warnAlerts.length+' warning'+(warnAlerts.length>1?'s':''),warnAlerts.length+' items',false);
-      warnAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
-    }
+    const grp=mkAlertGroup(issuesGroupTopLevel(critAlerts),buildIssuesGroupTitle(critAlerts.length,warnAlerts.length),String(nIss),false);
+    if(critAlerts.length&&warnAlerts.length)mkAlertSecLabel('Severe',grp);
+    critAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
+    if(critAlerts.length&&warnAlerts.length)mkAlertSecLabel('Warnings',grp);
+    warnAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
   }
   // Info/positive signals: always collapsed
   if(infoAlerts.length>0){
-    const grp=mkAlertGroup('info','Process health &amp; context notes',infoAlerts.length+' items',false);
+    const grp=mkAlertGroup('info','Health &amp; context',infoAlerts.length+'',false);
     infoAlerts.forEach(a=>mkAlert(a[0],a[1],a[2],grp));
   }
 
