@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # elastic-agent-perf.sh
-# Extracts performance metrics from Elastic Agent diagnostic NDJSON logs
+# Extracts component performance metrics from Elastic Agent diagnostic NDJSON logs
 # into five analysis-ready TSV files.
 #
 # Usage:
@@ -76,7 +76,7 @@ SEP="═════════════════════════
 
 echo ""
 echo "$SEP"
-echo " Elastic Agent Performance Analyzer"
+echo " Elastic Agent component performance"
 echo "$SEP"
 echo " Log dir   : ${LOG_DIR}"
 echo " Output    : ${OUT_DIR}"
@@ -322,12 +322,12 @@ run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
 '
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Table D -- Per-Input Processing Times (active inputs only)
+# Table D -- Per-input processing times (active inputs only)
 # Histograms are lifetime reservoirs (nanoseconds -> milliseconds)
 # COUNT = processing_time.histogram.count (number of latency observations in the reservoir, not "events/sec")
 # Frozen count across all intervals = no new histogram observations in this capture window
 # ─────────────────────────────────────────────────────────────────────────────
-run_table "Table D: Per-Input Processing" "D-input-processing.tsv" '
+run_table "Table D: Per-input processing" "D-input-processing.tsv" '
   ["TIMESTAMP","COMPONENT_ID","INPUT_ID",
    "COUNT","MEAN_ms","MEDIAN_ms","P95_ms","P99_ms","MAX_ms","STDDEV_ms"] | @tsv,
   (inputs |
@@ -399,7 +399,7 @@ echo " Output files:"
 echo "$SEP"
 ls -lh "$OUT_DIR"/*.tsv | awk '{printf "  %-8s %s\n", $5, $9}'
 echo ""
-echo " Load in analyzer : open input-analyzer.html"
+echo " View in browser   : open input-analyzer.html"
 echo " Open folder      : open ${OUT_DIR}"
 echo "$SEP"
 echo ""

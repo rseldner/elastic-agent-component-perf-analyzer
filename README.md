@@ -1,15 +1,15 @@
-# Elastic Agent input performance analyzer
+# Elastic Agent component performance analyzer
 
-**Live Working DEMO**: https://rseldner.github.io/elastic-agent-input-perf-analyzer/input-analyzer.html
+**Live Working DEMO**: https://rseldner.github.io/elastic-agent-component-perf-analyzer/input-analyzer.html
 
-Analyze Elastic Agent diagnostic data with a single browser dashboard: `input-analyzer.html`.
+Explore Elastic Agent component performance from diagnostic exports in one browser dashboard: `input-analyzer.html`.
 
 It supports both:
 
 - raw NDJSON log files (`elastic-agent-*.ndjson`), and
 - extracted A-E TSV outputs from `elastic-agent-perf.sh`.
 
-The page auto-detects the input format and renders the same charts, health cards, and stall diagnostics.
+The page auto-detects whether you loaded NDJSON or TSV and renders the same charts, health cards, and stall diagnostics.
 
 ## Option 1: direct NDJSON analysis (no script required)
 

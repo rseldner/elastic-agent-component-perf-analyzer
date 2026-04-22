@@ -13,7 +13,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Elastic Agent · Metrics Analyzer</title>
+<title>Elastic Agent · Component performance</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
@@ -422,8 +422,8 @@ table.itbl tr:hover td{background:var(--surf2)}
 <header>
   <div class="logo">
     <div class="logo-mark">&#9889;</div>
-    <div class="logo-text"><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Metrics Analyzer</div></div>
-    <a class="repo-link" href="https://github.com/rseldner/elastic-agent-input-perf-analyzer" target="_blank" rel="noopener noreferrer" aria-label="Open project repository on GitHub">GitHub Repo</a>
+    <div class="logo-text"><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Component performance</div></div>
+    <a class="repo-link" href="https://github.com/rseldner/elastic-agent-component-perf-analyzer" target="_blank" rel="noopener noreferrer" aria-label="Open project repository on GitHub">GitHub Repo</a>
   </div>
   <div class="hdr-actions">
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme"></button>
@@ -435,7 +435,7 @@ table.itbl tr:hover td{background:var(--surf2)}
   <div class="upload-h">Load diagnostic output</div>
   <p class="upload-sub">
     Drop either the <code>perf-analysis-*</code> folder from <code>elastic-agent-perf.sh</code> or raw <code>elastic-agent-*.ndjson</code> logs.<br>
-    The analyzer auto-detects format and opens the same dashboard.
+    The dashboard auto-detects format and opens the same views.
   </p>
   <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
     <div class="dz-icon">&#128194;</div>
@@ -465,13 +465,13 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="dash-actions-col">
         <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
           <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
-            <span class="inp-cap-toggle-main">All components · input status</span>
+            <span class="inp-cap-toggle-main">All components · per-input processing</span>
             <span class="inp-cap-toggle-meta" id="inp-cap-meta"></span>
             <span class="inp-cap-toggle-chev" aria-hidden="true">&#9660;</span>
           </button>
           <div id="inp-cap-body" class="inp-cap-body" hidden>
             <div class="inp-ov-wrap inp-ov-wrap--solo">
-              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Input Processing</strong> below). Click a row to select that component and jump to its table.</p>
+              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Per-input processing</strong> below). Click a row to select that component and jump to its table.</p>
               <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
               <div class="inp-ov-groups" id="inp-ov-groups"></div>
             </div>
@@ -542,7 +542,7 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 
   <div class="sec" id="sec-inp" style="display:none">
-    <div class="sec-hd">Input Processing</div>
+    <div class="sec-hd">Per-input processing</div>
     <div id="inp-empty-hint" class="cc full" style="display:none">
       <div class="cc-title">No per-input rows for this view</div>
       <div class="cc-sub" id="inp-empty-text"></div>
@@ -1607,7 +1607,7 @@ function refineInputStall(A,B,C){
 }
 
 /**
- * Stall persistency tuning (matches perf export interval in sampleS).
+ * Stall persistency tuning (matches component perf export interval in sampleS).
  * sustained: long single run or high coverage + medium run.
  * transient (episodic): short longest run + low coverage, or short wall time + low coverage.
  */
