@@ -39,6 +39,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px;color:var(--info)}
 header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--header-bg);backdrop-filter:blur(8px);z-index:100}
 .hdr-actions{display:flex;align-items:center;gap:12px}
+.hdr-status-wrap{display:inline-flex;align-items:center;gap:6px;max-width:min(100vw - 200px,520px)}
+.hdr-status-wrap #hdr-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .theme-toggle{
   font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
   padding:8px 12px;
@@ -86,6 +88,8 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .dash-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:20px}
 .dash-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);line-height:2;flex-shrink:0}
 .dash-meta b{color:var(--mid);font-weight:500}
+.dash-comp-wrap{display:inline-flex;align-items:baseline;gap:5px;max-width:100%;vertical-align:baseline}
+.dash-comp-wrap #m-comp{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(72ch,85vw)}
 .dash-actions{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
 .dash-actions-col{
   flex:1;min-width:0;max-width:min(100%,860px);
@@ -111,7 +115,8 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
   font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
   margin:0 0 7px 1px;
 }
-.comp-sel-inner{position:relative}
+.comp-sel-row{display:flex;align-items:stretch;gap:8px;width:100%}
+.comp-sel-inner{position:relative;flex:1;min-width:0}
 .comp-sel{
   display:block;width:100%;
   appearance:none;-webkit-appearance:none;
@@ -399,15 +404,17 @@ table.itbl tr:hover td{background:var(--surf2)}
 .inp-ov-grp-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .inp-ov-grp-n{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim)}
 .inp-ov-ul{list-style:none;margin:0;padding:0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--surf)}
+.inp-ov-row{display:flex;align-items:stretch;width:100%;border-bottom:1px solid var(--bdr);background:var(--surf)}
+.inp-ov-row:last-child{border-bottom:none}
 .inp-ov-line{
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;width:100%;text-align:left;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;flex:1;min-width:0;text-align:left;
   font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mid);
-  padding:9px 12px;border:none;border-bottom:1px solid var(--bdr);background:transparent;cursor:pointer;
+  padding:9px 12px;border:none;background:transparent;cursor:pointer;
   transition:background .12s ease;
 }
-.inp-ov-line:last-child{border-bottom:none}
 .inp-ov-line:hover{background:var(--surf2)}
 .inp-ov-line.sel{box-shadow:inset 3px 0 0 var(--accent)}
+.inp-ov-side{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:5px 7px;border-left:1px solid var(--bdr);background:var(--surf2);flex-shrink:0}
 .inp-ov-comp{color:var(--info);max-width:42ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inp-ov-sep{color:var(--dim);flex-shrink:0}
 .inp-ov-inp{color:var(--text);flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -416,6 +423,30 @@ table.itbl tr:hover td{background:var(--surf2)}
 .inp-ov-chip.hi-warn{background:rgba(255,184,48,.14);color:var(--warn)}
 .inp-ov-chip.hi-err{background:rgba(255,71,87,.14);color:var(--err)}
 .inp-ov-chip.hi-crit{background:rgba(255,45,85,.16);color:var(--crit)}
+.id-copy-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1;
+  padding:3px 7px;border:1px solid var(--bdr2);border-radius:5px;
+  background:var(--surf2);color:var(--dim);cursor:pointer;flex-shrink:0;
+  transition:border-color .12s ease,color .12s ease,background .12s ease;
+}
+.id-copy-btn:hover{border-color:rgba(0,212,255,.35);color:var(--text);background:var(--sel-hover-bg)}
+[data-theme="light"] .id-copy-btn:hover{border-color:rgba(0,124,170,.35)}
+.id-copy-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.id-copy-btn:disabled{opacity:.35;cursor:not-allowed}
+.id-copy-btn--done{border-color:rgba(0,200,117,.45)!important;color:var(--ok)!important}
+.id-copy-btn--inline{padding:1px 6px;font-size:9px;vertical-align:text-bottom}
+.id-copy-btn--hdr{padding:2px 6px;font-size:9px}
+.id-copy-btn--micro{padding:0 4px;font-size:9px;line-height:1.35;margin-left:3px;vertical-align:middle}
+.td-inp-id{display:flex;align-items:center;gap:6px;max-width:320px}
+.td-inp-id .td-inp-id-txt{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#comp-sel-copy{align-self:center}
+.copy-toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 14px;border-radius:8px;
+  background:var(--surf);color:var(--text);border:1px solid var(--bdr2);
+  box-shadow:0 6px 24px rgba(0,0,0,.35);pointer-events:none;
+}
+[data-theme="light"] .copy-toast{box-shadow:0 6px 20px rgba(15,23,42,.12)}
 </style>
 </head>
 <body>
@@ -427,7 +458,10 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
   <div class="hdr-actions">
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme"></button>
-    <div id="hdr-status">no data loaded</div>
+    <div class="hdr-status-wrap">
+      <span id="hdr-status">no data loaded</span>
+      <button type="button" class="id-copy-btn id-copy-btn--hdr" id="hdr-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button>
+    </div>
   </div>
 </header>
 
@@ -460,7 +494,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 
 <div id="pg-dash">
   <div class="dash-top">
-    <div class="dash-meta">COMPONENT &nbsp;<b id="m-comp">&mdash;</b><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
+    <div class="dash-meta">COMPONENT &nbsp;<span class="dash-comp-wrap"><b id="m-comp">&mdash;</b><button type="button" class="id-copy-btn id-copy-btn--inline" id="dash-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button></span><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
     <div class="dash-actions">
       <div class="dash-actions-col">
         <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
@@ -471,7 +505,7 @@ table.itbl tr:hover td{background:var(--surf2)}
           </button>
           <div id="inp-cap-body" class="inp-cap-body" hidden>
             <div class="inp-ov-wrap inp-ov-wrap--solo">
-              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Per-input processing</strong> below). Click a row to select that component and jump to its table.</p>
+              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Per-input processing</strong> below). Click a row to select that component and jump to its table. The two clipboard icons on each row copy the <strong>component ID</strong> (top) and <strong>input ID</strong> (bottom).</p>
               <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
               <div class="inp-ov-groups" id="inp-ov-groups"></div>
             </div>
@@ -479,8 +513,11 @@ table.itbl tr:hover td{background:var(--surf2)}
         </div>
         <div class="comp-sel-panel">
           <label class="comp-sel-lbl" for="comp-sel">Component Details</label>
-          <div class="comp-sel-inner">
-            <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+          <div class="comp-sel-row">
+            <div class="comp-sel-inner">
+              <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+            </div>
+            <button type="button" class="id-copy-btn" id="comp-sel-copy" hidden disabled title="Copy selected component ID" aria-label="Copy selected component ID">&#128203;</button>
           </div>
         </div>
       </div>
@@ -570,7 +607,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="inp-status-legend"><strong>FROZEN</strong> &mdash; sample count is identical on every loaded interval (no new histogram observations in this capture). <strong>CRITICAL</strong> &mdash; P99 processing time &gt; 30&nbsp;s. <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
       </div>
       <div class="cgrid" style="margin-top:12px">
-        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long input IDs wrap to several lines; tooltip title shows the full id.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
+        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long input IDs wrap to several lines; tooltip title shows the full id. <strong>Click a bar</strong> to copy that input&rsquo;s full ID.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -831,7 +868,7 @@ function loadNdjsonFromFileList(files){
   }
   const A=[],B=[],C=[],D=[],E=[];
   const label=arr.length===1?arr[0].name.split('/').pop():arr.length+' files';
-  document.getElementById('hdr-status').textContent='parsing NDJSON...';
+  setHdrStatus('parsing NDJSON...');
   let idx=0;
   function readNext(){
     if(idx>=arr.length){applyParsedTables(A,B,C,D,E,label);return;}
@@ -868,13 +905,13 @@ function refreshBtn(sourceLabel){
   }else{
     b.textContent=nTables===0?'Drop files to begin \u2192':nTables<5?`Analyze \u2014 ${nTables}/5 files \u2192`:'Analyze \u2192';
   }
-  const st=document.getElementById('hdr-status');
-  if(nTables===0){st.textContent='no data loaded';return;}
+  if(nTables===0){setHdrStatus('no data loaded');syncComponentIdCopyUi('');return;}
   if(SOURCE_MODE==='ndjson'){
-    st.textContent=`${nTables}/5 tables · ${nRows} rows`+(sourceLabel?' · '+sourceLabel:'');
+    setHdrStatus(`${nTables}/5 tables · ${nRows} rows`+(sourceLabel?' · '+sourceLabel:''));
   }else{
-    st.textContent=`${nTables}/5 files`+(sourceLabel?' · '+sourceLabel:'');
+    setHdrStatus(`${nTables}/5 files`+(sourceLabel?' · '+sourceLabel:''));
   }
+  syncComponentIdCopyUi('');
 }
 
 const dz=document.getElementById('dropzone');
@@ -1101,11 +1138,19 @@ function mkBar(id,labels,datasets,barOpts){
     }});
   }
   const layout=padBottom>0?{padding:{left:4,right:4,bottom:padBottom,top:0}}:undefined;
+  const copyTitles=barOpts.xTooltipTitles;
+  const onBarClick=copyTitles&&copyTitles.length?function(_evt,els){
+    if(!els||!els.length)return;
+    const i=els[0].index;
+    const full=copyTitles[i];
+    if(full!=null&&String(full)!=='')copyIdentToClipboard(String(full),null);
+  }:undefined;
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:{
     layout:layout||{},
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
     scales:{x:{grid:{color:tcg.grid},ticks:xTicks},y:{beginAtZero:true,grid:{color:tcg.grid},ticks:yTicks}},
-    plugins,elements:{bar:{borderRadius:3}}
+    plugins,elements:{bar:{borderRadius:3}},
+    ...(onBarClick?{onClick:onBarClick}:{})
   }});
 }
 
@@ -1198,6 +1243,87 @@ function fmtBytes(b){
 }
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+/** Tiny clipboard control; `kind` is only for aria/title. */
+function copyIdentBtnHtml(fullId,kind){
+  kind=kind||'input';
+  const lab=kind==='comp'?'component':'input';
+  const f=String(fullId==null?'':fullId);
+  return'<button type="button" class="id-copy-btn id-copy-btn--micro" data-copy="'+escAttr(f)+'" title="Copy full '+lab+' ID" aria-label="Copy '+lab+' ID">&#128203;</button>';
+}
+function setHdrStatus(label,opts){
+  opts=opts||{};
+  const span=document.getElementById('hdr-status');
+  const btn=document.getElementById('hdr-comp-copy');
+  if(span)span.textContent=label;
+  if(btn){
+    const c=opts.copyComponent!=null?String(opts.copyComponent):'';
+    if(c){
+      btn.hidden=false;
+      btn.disabled=false;
+      btn.setAttribute('data-copy',c);
+    }else{
+      btn.hidden=true;
+      btn.disabled=true;
+      btn.removeAttribute('data-copy');
+    }
+  }
+}
+function syncComponentIdCopyUi(cid){
+  const c=String(cid||'').trim();
+  const ok=!!c;
+  ['dash-comp-copy','comp-sel-copy'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(!b)return;
+    if(ok){
+      b.hidden=false;
+      b.disabled=false;
+      b.setAttribute('data-copy',c);
+    }else{
+      b.hidden=true;
+      b.disabled=true;
+      b.removeAttribute('data-copy');
+    }
+  });
+}
+function showCopyToast(){
+  let el=document.getElementById('copy-toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='copy-toast';
+    el.className='copy-toast';
+    el.setAttribute('role','status');
+    el.setAttribute('aria-live','polite');
+    document.body.appendChild(el);
+  }
+  el.textContent='Copied';
+  el.removeAttribute('hidden');
+  clearTimeout(el._copyToastT);
+  el._copyToastT=setTimeout(()=>{el.setAttribute('hidden','');},900);
+}
+async function copyIdentToClipboard(text,triggerEl){
+  const t=String(text==null?'':text);
+  if(!t)return;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      await navigator.clipboard.writeText(t);
+    else{
+      const ta=document.createElement('textarea');
+      ta.value=t;
+      ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    showCopyToast();
+    if(triggerEl&&triggerEl.classList){
+      triggerEl.classList.add('id-copy-btn--done');
+      clearTimeout(triggerEl._copyFlashT);
+      triggerEl._copyFlashT=setTimeout(()=>{triggerEl.classList.remove('id-copy-btn--done');},1100);
+    }
+  }catch(err){console.warn('copy failed',err);}
+}
 function inpTdDur(ms,css){const n=Number(ms)||0;return'<td class="num" style="'+(css||'')+'" title="'+n+' ms (exact)">'+fmtDurationMs(n)+'</td>';}
 function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
 function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
@@ -1414,10 +1540,15 @@ function renderInputStatusOverview(allD,selectedCid){
       const compDisp=it.comp.length>40?escHtml(it.comp.slice(0,36)+'\u2026'):escHtml(it.comp);
       const chips=it.hi.map(h=>'<span class="inp-ov-chip '+h.cls+'">'+h.text+'</span>').join('');
       const sel=String(it.comp).trim()===String(selectedCid||'').trim()?' sel':'';
-      html+='<li><button type="button" class="inp-ov-line'+sel+'" data-ov-cid="'+escAttr(it.comp)+'" title="Select this component; scroll to Input detail table">'+
+      html+='<li class="inp-ov-row">'+
+        '<button type="button" class="inp-ov-line'+sel+'" data-ov-cid="'+escAttr(it.comp)+'" title="Select this component; scroll to Input detail table">'+
         '<span class="inp-ov-comp">'+compDisp+'</span><span class="inp-ov-sep">&middot;</span><span class="inp-ov-inp">'+sid+'</span>'+
         (chips?'<span class="inp-ov-hi">'+chips+'</span>':'')+
-        '</button></li>';
+        '</button>'+
+        '<div class="inp-ov-side">'+
+        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(it.comp)+'" title="Copy component ID" aria-label="Copy component ID">&#128203;</button>'+
+        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(id)+'" title="Copy input ID" aria-label="Copy input ID">&#128203;</button>'+
+        '</div></li>';
     }
     html+='</ul></div>';
   }
@@ -1768,7 +1899,8 @@ function resetAll(){
   const g=document.getElementById('inp-ov-groups');if(g)g.innerHTML='';
   const fp=document.getElementById('flow-persist');if(fp)fp.innerHTML='';
   const fw=document.getElementById('flow-var-wrap');if(fw)fw.innerHTML='';
-  document.getElementById('hdr-status').textContent='no data loaded';
+  setHdrStatus('no data loaded');
+  syncComponentIdCopyUi('');
   document.getElementById('go-btn').disabled=true;
   document.getElementById('go-btn').textContent='Drop files to begin \u2192';
 }
@@ -1789,7 +1921,13 @@ function showDashboard(){
   });
   sel.onchange=()=>renderComp(sel.value);
   if(comps.length>0){sel.value=comps[0];renderComp(comps[0]);}
-  else{document.getElementById('alerts').innerHTML='';mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');}
+  else{
+    document.getElementById('alerts').innerHTML='';
+    mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');
+    const mc=document.getElementById('m-comp');
+    if(mc)mc.textContent='\u2014';
+    syncComponentIdCopyUi('');
+  }
 }
 
 function renderComp(cid){
@@ -1815,7 +1953,8 @@ function renderComp(cid){
   document.getElementById('m-comp').textContent=cid;
   document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
   document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmt(base.length*30/60,0)+' min)';
-  document.getElementById('hdr-status').textContent=cid.length>22?cid.slice(0,22)+'\u2026':cid;
+  setHdrStatus(cid.length>22?cid.slice(0,22)+'\u2026':cid,{copyComponent:cid});
+  syncComponentIdCopyUi(cid);
 
   const totAck=sumKey(A,'ACKED'),totFail=sumKey(A,'FAILED');
   const isStalled=A.length>5&&totAck===0&&totFail===0;
@@ -2052,10 +2191,10 @@ function renderComp(cid){
       else if(p99>30000)ho.push({iid,p99});
     });
     if(fh.length)critAlerts.push(['error',fh.length+' input(s) stalled with high processing latency',
-      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>{const t=x.iid.length>36?x.iid.slice(0,36)+'\u2026':x.iid;return'&nbsp;&nbsp;\u2022 '+t+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')';}).join('<br>')]);
+      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid)+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')';}).join('<br>')]);
     if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (histogram frozen)',
-      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>{const t=x.iid.length>36?x.iid.slice(0,36)+'\u2026':x.iid;return'&nbsp;&nbsp;\u2022 '+t+' (samples='+fmt(x.count)+')';}).join('<br>')]);
-    ho.forEach(x=>{const t=x.iid.length>32?x.iid.slice(0,32)+'\u2026':x.iid;critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+t,'Processing P99 exceeds 30\u00a0s.']);});
+      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid)+' (samples='+fmt(x.count)+')';}).join('<br>')]);
+    ho.forEach(x=>{const t=x.iid.length>32?escHtml(x.iid.slice(0,32)+'\u2026'):escHtml(x.iid);critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+t,'Processing P99 exceeds 30\u00a0s. '+copyIdentBtnHtml(x.iid)]);});
   }
 
   // ── POSITIVE SIGNALS (collapsed by default) ──────────
@@ -2359,7 +2498,8 @@ function renderComp(cid){
       const p95s=Number(r.P95_ms)>10000?'color:var(--warn);':'';
       const p99s=Number(r.P99_ms)>10000?'color:var(--err);':'';
       const maxs=Number(r.MAX_ms)>30000?'color:var(--crit);':'';
-      tr.innerHTML='<td title="'+escAttr(id)+'" style="color:var(--text);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sid+'</td>'+
+      tr.innerHTML='<td class="td-inp-id" title="'+escAttr(id)+'">'+
+        '<span class="td-inp-id-txt" style="color:var(--text)">'+escHtml(sid)+'</span>'+copyIdentBtnHtml(id,'input')+'</td>'+
         '<td class="num" title="histogram.count = '+cnt+' (exact)">'+fmt(cnt)+'</td>'+
         inpTdDur(r.MEAN_ms,'')+inpTdDur(r.MEDIAN_ms,'')+
         inpTdDur(r.P95_ms,p95s)+inpTdDur(r.P99_ms,p99s)+inpTdDur(r.MAX_ms,maxs)+
@@ -2390,6 +2530,15 @@ function renderComp(cid){
 }
 
 (function(){
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-copy]');
+    if(!btn)return;
+    e.preventDefault();
+    e.stopPropagation();
+    const raw=btn.getAttribute('data-copy');
+    if(raw==null||raw==='')return;
+    copyIdentToClipboard(raw,btn);
+  });
   syncFlowModeSeg();
   syncLayerChartYSeg();
   const tb=document.getElementById('theme-toggle');
