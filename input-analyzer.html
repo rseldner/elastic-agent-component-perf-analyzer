@@ -76,10 +76,13 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .dash-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:20px}
 .dash-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);line-height:2;flex-shrink:0}
 .dash-meta b{color:var(--mid);font-weight:500}
-.dash-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
-.comp-sel-panel{
+.dash-actions{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
+.dash-actions-col{
   flex:1;min-width:0;max-width:min(100%,860px);
-  position:relative;
+  display:flex;flex-direction:column;gap:14px;
+}
+.comp-sel-panel{
+  position:relative;width:100%;
   padding:11px 14px 12px 16px;
   border-radius:10px;
   border:1px solid var(--bdr);
@@ -248,6 +251,8 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .cc.full{grid-column:1/-1}
 /* Full-row charts otherwise grow with viewport width (Chart.js default aspect ratio). */
 .chart-fixed-h{position:relative;height:min(260px,42vh);min-height:200px;width:100%}
+/* Input bar chart: extra vertical room for multiline per-input x labels */
+.chart-fixed-h.chart-ibar-h{min-height:min(380px,55vh);height:min(340px,50vh)}
 .cc.stalled{border-color:rgba(255,45,85,.25)}
 .cc.stalled .cc-title::after{content:' \2014 ALL ZERO';font-size:9px;font-weight:400;color:var(--crit);letter-spacing:.06em}
 .cc.frozen-data .cc-sub::before{content:'\26A0 frozen reservoir \2014 values from before this window  \B7  ';color:rgba(255,184,48,.7)}
@@ -275,7 +280,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 .inp-overview-note{font-size:11px;color:var(--dim);line-height:1.55;margin:0 0 14px;max-width:95ch}
 .inp-ov-wrap{margin-top:18px;padding-top:20px;border-top:1px solid var(--bdr)}
 .inp-ov-wrap.inp-ov-wrap--solo{margin-top:0;padding-top:0;border-top:none}
-.inp-cap-root{margin-bottom:18px}
+.inp-cap-root{margin:0}
 .inp-cap-toggle{
   position:sticky;top:var(--sticky-below-header);z-index:55;
   display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;width:100%;
@@ -293,7 +298,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 .inp-cap-root.open .inp-cap-toggle{border-radius:8px 8px 0 0}
 .inp-cap-root.open .inp-cap-toggle-chev{transform:rotate(-180deg)}
 .inp-cap-body{
-  display:none;padding:14px 16px 16px;border:1px solid var(--bdr);border-top:none;border-radius:0 0 8px 8px;
+  padding:14px 16px 16px;border:1px solid var(--bdr);border-top:none;border-radius:0 0 8px 8px;
   background:var(--surf);margin-top:-1px;
 }
 .inp-cap-body[hidden]{display:none!important}
@@ -365,28 +370,29 @@ table.itbl tr:hover td{background:var(--surf2)}
   <div class="dash-top">
     <div class="dash-meta">COMPONENT &nbsp;<b id="m-comp">&mdash;</b><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
     <div class="dash-actions">
-      <div class="comp-sel-panel">
-        <label class="comp-sel-lbl" for="comp-sel">Component</label>
-        <div class="comp-sel-inner">
-          <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+      <div class="dash-actions-col">
+        <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
+          <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
+            <span class="inp-cap-toggle-main">All components · input status</span>
+            <span class="inp-cap-toggle-meta" id="inp-cap-meta"></span>
+            <span class="inp-cap-toggle-chev" aria-hidden="true">&#9660;</span>
+          </button>
+          <div id="inp-cap-body" class="inp-cap-body" hidden>
+            <div class="inp-ov-wrap inp-ov-wrap--solo">
+              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Input Processing</strong> below). Click a row to select that component and jump to its table.</p>
+              <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
+              <div class="inp-ov-groups" id="inp-ov-groups"></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-sel-panel">
+          <label class="comp-sel-lbl" for="comp-sel">Component Details</label>
+          <div class="comp-sel-inner">
+            <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+          </div>
         </div>
       </div>
       <button class="reload-btn" onclick="resetAll()">&#8617; reload</button>
-    </div>
-  </div>
-
-  <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
-    <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
-      <span class="inp-cap-toggle-main">All components · input status</span>
-      <span class="inp-cap-toggle-meta" id="inp-cap-meta"></span>
-      <span class="inp-cap-toggle-chev" aria-hidden="true">&#9660;</span>
-    </button>
-    <div id="inp-cap-body" class="inp-cap-body" hidden>
-      <div class="inp-ov-wrap inp-ov-wrap--solo">
-        <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Input Processing</strong> below). Click a row to select that component and jump to its table.</p>
-        <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
-        <div class="inp-ov-groups" id="inp-ov-groups"></div>
-      </div>
     </div>
   </div>
 
@@ -440,7 +446,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="inp-status-legend"><strong>FROZEN</strong> &mdash; sample count is identical on every loaded interval (no new histogram observations in this capture). <strong>CRITICAL</strong> &mdash; P99 processing time &gt; 30&nbsp;s. <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
       </div>
       <div class="cgrid" style="margin-top:12px">
-        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window.</div><div class="chart-fixed-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
+        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long input IDs wrap to several lines; tooltip title shows the full id.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -659,6 +665,38 @@ function mkLine(id,labels,datasets,extraScales,lineOpts){
   }});
 }
 
+/** For Chart.js category keys: return a string, or a string[] so each string draws on its own line. */
+function wrapInputIdForAxis(s,maxW,maxLines){
+  s=String(s==null?'':s);
+  maxW=Math.max(8,Number(maxW)||20);
+  maxLines=Math.max(1,Math.min(12,Number(maxLines)||5));
+  if(s.length<=maxW)return s;
+  const out=[];
+  let i=0;
+  while(i<s.length&&out.length<maxLines-1){
+    if(s.length-i<=maxW){
+      out.push(s.slice(i));
+      return out.length===1?out[0]:out;
+    }
+    const winEnd=Math.min(i+maxW,s.length);
+    let j=winEnd;
+    for(let p=winEnd-1;p>i+2;p--){
+      const c=s[p];
+      if(c==='.'||c==='/'||c===':'||c==='_'||c==='-'){j=p+1;break;}
+    }
+    if(j===winEnd)j=i+maxW;
+    let part=s.slice(i,j).replace(/[/:._-]+$/g,'');
+    if(!part)part=s.slice(i,j);
+    out.push(part);
+    i=j;
+  }
+  if(i<s.length){
+    const t=s.slice(i);
+    out.push(t.length<=maxW?t:t.slice(0,maxW-1)+'\u2026');
+  }
+  return out.length===1?out[0]:out;
+}
+
 function mkBar(id,labels,datasets,barOpts){
   barOpts=barOpts||{};
   if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
@@ -669,10 +707,31 @@ function mkBar(id,labels,datasets,barOpts){
   if(yFmt==='durationMs')yTicks.callback=v=>fmtDurationMsAxis(v);
   else if(yFmt==='bytes')yTicks.callback=v=>fmtBytes(v);
   const tcg=chartThemeColors();
+  const linePx=Number(barOpts.xLabelLinePx)>0?Number(barOpts.xLabelLinePx):12;
+  const wrapX=!!barOpts.wrappedXLabels;
+  const maxWrapLines=wrapX?Math.max(1,...labels.map(l=>Array.isArray(l)?l.length:1)):1;
+  const padBottom=wrapX?8+(maxWrapLines-1)*linePx:0;
+  const xTicks=wrapX?{
+    maxRotation:0,minRotation:0,autoSkip:false,
+    maxTicksLimit:Math.max(12,labels.length),
+    font:{size:10,family:"'IBM Plex Mono',monospace",lineHeight:1.25},
+  }:{
+    maxRotation:20,maxTicksLimit:12
+  };
   const plugins={legend:{display:true},...chartTooltipYFormat(yFmt)};
+  if(barOpts.xTooltipTitles&&barOpts.xTooltipTitles.length){
+    plugins.tooltip=plugins.tooltip||{};
+    plugins.tooltip.callbacks=Object.assign({},plugins.tooltip.callbacks||{},{title(items){
+      if(!items||!items[0]||!barOpts.xTooltipTitles)return'';
+      const t=barOpts.xTooltipTitles[items[0].dataIndex];
+      return t==null||t===''?'':String(t);
+    }});
+  }
+  const layout=padBottom>0?{padding:{left:4,right:4,bottom:padBottom,top:0}}:undefined;
   CHARTS[id]=new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets},options:{
+    layout:layout||{},
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
-    scales:{x:{ticks:{maxTicksLimit:12,maxRotation:20},grid:{color:tcg.grid}},y:{beginAtZero:true,grid:{color:tcg.grid},ticks:yTicks}},
+    scales:{x:{grid:{color:tcg.grid},ticks:xTicks},y:{beginAtZero:true,grid:{color:tcg.grid},ticks:yTicks}},
     plugins,elements:{bar:{borderRadius:3}}
   }});
 }
@@ -849,8 +908,8 @@ function renderInputStatusOverview(allD,selectedCid){
     html+='<ul class="inp-ov-ul">';
     for(const it of list){
       const id=it.inputId;
-      const sid=id.length>52?escHtml(id.slice(0,22)+'\u2026'+id.slice(-24)):escHtml(id);
-      const compDisp=it.comp.length>40?escHtml('\u2026'+it.comp.slice(-36)):escHtml(it.comp);
+      const sid=id.length>52?escHtml(id.slice(0,46)+'\u2026'):escHtml(id);
+      const compDisp=it.comp.length>40?escHtml(it.comp.slice(0,36)+'\u2026'):escHtml(it.comp);
       const chips=it.hi.map(h=>'<span class="inp-ov-chip '+h.cls+'">'+h.text+'</span>').join('');
       const sel=String(it.comp).trim()===String(selectedCid||'').trim()?' sel':'';
       html+='<li><button type="button" class="inp-ov-line'+sel+'" data-ov-cid="'+escAttr(it.comp)+'" title="Select this component; scroll to Input detail table">'+
@@ -1218,7 +1277,7 @@ function renderComp(cid){
   document.getElementById('m-comp').textContent=cid;
   document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
   document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmt(base.length*30/60,0)+' min)';
-  document.getElementById('hdr-status').textContent='\u2026'+cid.slice(-22);
+  document.getElementById('hdr-status').textContent=cid.length>22?cid.slice(0,22)+'\u2026':cid;
 
   const totAck=sumKey(A,'ACKED'),totFail=sumKey(A,'FAILED');
   const isStalled=A.length>5&&totAck===0&&totFail===0;
@@ -1439,10 +1498,10 @@ function renderComp(cid){
       else if(p99>30000)ho.push({iid,p99});
     });
     if(fh.length)critAlerts.push(['error',fh.length+' input(s) stalled with high processing latency',
-      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')').join('<br>')]);
+      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>{const t=x.iid.length>36?x.iid.slice(0,36)+'\u2026':x.iid;return'&nbsp;&nbsp;\u2022 '+t+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')';}).join('<br>')]);
     if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (histogram frozen)',
-      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>'&nbsp;&nbsp;\u2022 '+x.iid.slice(-36)+' (samples='+fmt(x.count)+')').join('<br>')]);
-    ho.forEach(x=>critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+x.iid.slice(-32),'Processing P99 exceeds 30\u00a0s.']));
+      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>{const t=x.iid.length>36?x.iid.slice(0,36)+'\u2026':x.iid;return'&nbsp;&nbsp;\u2022 '+t+' (samples='+fmt(x.count)+')';}).join('<br>')]);
+    ho.forEach(x=>{const t=x.iid.length>32?x.iid.slice(0,32)+'\u2026':x.iid;critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+t,'Processing P99 exceeds 30\u00a0s.']);});
   }
 
   // ── POSITIVE SIGNALS (collapsed by default) ──────────
@@ -1717,18 +1776,20 @@ function renderComp(cid){
     inpHint.style.display='none';
     const ids=[...new Set(D.map(r=>r.INPUT_ID))];
     const lasts=ids.map(id=>D.filter(r=>r.INPUT_ID===id).pop());
-    mkBar('ch-ibar',lasts.map(r=>{const id=String(r.INPUT_ID||'');return id.length>28?'\u2026'+id.slice(-22):id;}),[
+    const fullInputIds=lasts.map(r=>String(r.INPUT_ID||''));
+    const barIbLabels=fullInputIds.map(s=>wrapInputIdForAxis(s,20,5));
+    mkBar('ch-ibar',barIbLabels,[
       {label:'Mean',data:lasts.map(r=>Number(r.MEAN_ms)||0),backgroundColor:'rgba(0,212,255,.65)'},
       {label:'P95',data:lasts.map(r=>Number(r.P95_ms)||0),backgroundColor:'rgba(124,92,252,.65)'},
       {label:'P99',data:lasts.map(r=>Number(r.P99_ms)||0),backgroundColor:'rgba(255,184,48,.65)'},
       {label:'Max',data:lasts.map(r=>Number(r.MAX_ms)||0),backgroundColor:'rgba(255,71,87,.65)'},
-    ],{maintainAspectRatio:false,yFormat:'durationMs'});
+    ],{maintainAspectRatio:false,yFormat:'durationMs',wrappedXLabels:true,xLabelLinePx:12,xTooltipTitles:fullInputIds});
     const tbody=document.getElementById('itbody');tbody.innerHTML='';
     ids.forEach(id=>{
       const rows=D.filter(r=>r.INPUT_ID===id);
       const st=computeInputProcStatus(rows);
       const r=rows[rows.length-1];
-      const sid=id.length>44?id.slice(0,20)+'\u2026'+id.slice(-18):id;
+      const sid=id.length>44?id.slice(0,39)+'\u2026':id;
       const tr=document.createElement('tr');
       const cnt=Number(r.COUNT)||0;
       const p95s=Number(r.P95_ms)>10000?'color:var(--warn);':'';
