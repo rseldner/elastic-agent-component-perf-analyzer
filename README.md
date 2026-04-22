@@ -55,3 +55,10 @@ Open `input-analyzer.html` in a browser, then drop that `perf-analysis-*` folder
 Using `elastic-agent-perf.sh` can help for sanitization scenarios: sharing only the generated TSV files is usually lower risk than sharing raw NDJSON logs.
 
 Those TSV outputs are metric-focused and typically include component IDs, timestamps, and aggregate counters/latencies rather than raw event payloads, host IPs, or secrets. Still, treat them as operational telemetry and review before sharing, since environment-specific identifiers and timing data can still be sensitive in some contexts.
+
+
+### Screenshot
+
+<img width="693" height="2219" alt="screenshot" src="https://github.com/user-attachments/assets/b0cb1bc9-86bc-4ebf-abaa-8de7d9a1e05d" />
+
+ 
