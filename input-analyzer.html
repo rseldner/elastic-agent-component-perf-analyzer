@@ -158,9 +158,29 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .sb-persist .pt-sustained,.flow-persist .pt-sustained{background:rgba(255,45,85,.18);color:#ffb3bd}
 .sb-persist .pt-transient,.flow-persist .pt-transient{background:rgba(126,200,227,.12);color:var(--info)}
 .sb-persist .pt-moderate,.flow-persist .pt-moderate{background:rgba(255,184,48,.12);color:var(--warn)}
-#flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px}
-.flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-.flow-persist{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);line-height:1.65;margin-bottom:14px;max-width:96ch}
+#flow-diagram{display:none;margin-bottom:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 20px;min-width:0;box-sizing:border-box}
+.flow-hd-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 14px;margin-bottom:8px;min-width:0}
+.flow-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.flow-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-width:0}
+.flow-mode-lbl{color:var(--dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.flow-mode-seg{display:inline-flex;border:1px solid var(--bdr2);border-radius:6px;overflow:hidden;flex-shrink:0}
+.flow-mode-seg button{font-family:inherit;font-size:10px;font-weight:500;padding:6px 9px;border:none;background:var(--surf2);color:var(--mid);cursor:pointer;transition:color .12s ease,background .12s ease}
+.flow-mode-seg button:hover{color:var(--text);background:var(--sel-hover-bg)}
+.flow-mode-seg button[aria-selected="true"]{background:rgba(0,153,204,.14);color:var(--accent);box-shadow:0 0 0 1px rgba(0,153,204,.2) inset}
+.flow-mode-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[data-theme="light"] .flow-mode-seg button[aria-selected="true"]{background:rgba(0,124,170,.12);color:var(--accent);box-shadow:0 0 0 1px rgba(0,124,170,.18) inset}
+.flow-var-wrap{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);line-height:1.55;
+  margin:0 0 10px;width:100%;max-width:100%;min-width:0;
+  overflow-wrap:break-word;word-break:normal
+}
+.flow-var-wrap abbr{cursor:help;text-decoration:underline dotted;text-underline-offset:2px;text-decoration-color:var(--bdr2)}
+.flow-var-wrap strong{color:var(--mid);font-weight:600}
+.flow-persist{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);line-height:1.65;
+  margin-bottom:14px;width:100%;max-width:100%;min-width:0;
+  overflow-wrap:break-word;word-break:normal
+}
 .flow-row{display:flex;align-items:center;flex-wrap:nowrap}
 .flow-node{display:flex;flex-direction:column;align-items:center;min-width:90px}
 .fn-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
@@ -215,7 +235,11 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .stat-group-hd{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 7px 2px}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px}
 .stat-row > .sc{min-width:0}
-.stat-legend{font-size:11px;color:var(--dim);margin:-2px 0 12px 2px;line-height:1.5;max-width:72ch}
+.stat-legend{
+  font-size:11px;color:var(--dim);margin:-2px 0 12px 2px;line-height:1.55;
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  overflow-wrap:break-word;word-break:normal
+}
 .stat-legend .sl-term{font-family:'IBM Plex Mono',monospace;color:var(--mid);font-weight:600}
 .sc{background:var(--surf);border:1px solid var(--bdr);border-radius:7px;padding:13px 15px}
 .sc.sw{border-color:rgba(255,184,48,.35);background:rgba(255,184,48,.04)}
@@ -282,6 +306,35 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .cc.deadlock{border-color:rgba(255,71,87,.4);background:rgba(255,71,87,.03)}
 .cc-title{font-size:12px;font-weight:600;color:var(--mid);margin-bottom:2px}
 .cc-sub{font-size:10px;color:var(--dim);margin-bottom:13px;font-family:'IBM Plex Mono',monospace}
+.cc-head-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 16px;margin-bottom:2px}
+.cc-head-titles{flex:1;min-width:min(280px,100%)}
+.cc-head-row .cc-title{margin-bottom:2px}
+.cc-head-row .cc-sub{margin-bottom:8px}
+.cc-layer-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:10px;flex-shrink:0}
+.cc-layer-view-lbl{color:var(--dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.cc-tip-wrap{position:relative;flex-shrink:0;padding-bottom:10px;margin-bottom:-10px}
+.cc-tip-trigger{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--bdr2);
+  background:var(--surf2);color:var(--info);font-weight:700;font-size:12px;line-height:1;
+  cursor:help;transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+.cc-tip-wrap:hover .cc-tip-trigger,.cc-tip-wrap:focus-within .cc-tip-trigger{border-color:rgba(0,153,204,.35);color:var(--accent);background:var(--sel-hover-bg)}
+.cc-layer-tip{
+  display:none;position:absolute;z-index:220;top:100%;margin-top:2px;right:0;left:auto;transform:none;
+  width:min(440px,calc(100vw - 40px));max-height:min(72vh,520px);overflow-y:auto;overflow-x:hidden;
+  padding:12px 14px;background:var(--tip-bg);border:1px solid var(--bdr2);border-radius:8px;
+  box-shadow:0 8px 28px var(--tip-shadow);font-size:11px;line-height:1.55;color:var(--mid);
+  font-family:'IBM Plex Mono',monospace;pointer-events:auto;text-align:left;
+}
+.cc-layer-tip strong{color:var(--text);font-weight:600}
+.cc-layer-tip .lht{margin:10px 0 4px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cc-layer-tip .lht:first-child{margin-top:0}
+.cc-layer-tip ul{margin:4px 0 0 1.1em;padding:0}
+.cc-layer-tip li{margin:3px 0}
+.cc-tip-wrap:hover .cc-layer-tip,.cc-tip-wrap:focus-within .cc-layer-tip{display:block}
+.cc-layer-y-caveat{display:none;font-size:10px;color:var(--dim);margin:0 0 8px;font-family:'IBM Plex Mono',monospace;line-height:1.45;max-width:100%}
+.cc-layer-y-caveat.on{display:block}
 .tscroll{overflow-x:auto}
 table.itbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
 table.itbl th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:7px 9px;border-bottom:1px solid var(--bdr);font-weight:600}
@@ -420,7 +473,23 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 
   <div id="stall-banner"><div class="sb-title" id="sb-title"></div><div class="sb-body" id="sb-body"></div></div>
-  <div id="flow-diagram"><div class="flow-title">Event flow</div><div class="flow-persist" id="flow-persist"></div><div class="flow-row" id="flow-row"></div></div>
+  <div id="flow-diagram">
+    <div class="flow-hd-row">
+      <div class="flow-title">Event flow</div>
+      <div class="flow-toolbar">
+        <span class="flow-mode-lbl" id="flow-mode-lbl">Roll-up</span>
+        <div class="flow-mode-seg" role="tablist" aria-label="Event flow roll-up">
+          <button type="button" role="tab" data-flow-mode="latest" aria-selected="true" onclick="setFlowMode('latest')">Latest</button>
+          <button type="button" role="tab" data-flow-mode="worst" aria-selected="false" onclick="setFlowMode('worst')">Worst</button>
+          <button type="button" role="tab" data-flow-mode="best" aria-selected="false" onclick="setFlowMode('best')">Best</button>
+          <button type="button" role="tab" data-flow-mode="mean" aria-selected="false" onclick="setFlowMode('mean')">Mean</button>
+        </div>
+      </div>
+    </div>
+    <div class="flow-var-wrap" id="flow-var-wrap"></div>
+    <div class="flow-persist" id="flow-persist"></div>
+    <div class="flow-row" id="flow-row"></div>
+  </div>
   <div class="health-grid" id="health-grid"></div>
   <div id="alerts"></div>
 
@@ -433,8 +502,24 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="sec-hd">Event flow by layer</div>
     <div class="cgrid">
       <div class="cc full" id="cc-layer">
-        <div class="cc-title">In-flight events per pipeline layer</div>
-        <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
+        <div class="cc-head-row">
+          <div class="cc-head-titles">
+            <div class="cc-title">In-flight events per pipeline layer</div>
+            <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
+          </div>
+          <div class="cc-layer-ctrl">
+            <div class="cc-tip-wrap">
+              <span class="cc-tip-trigger" tabindex="0" role="button" aria-label="How to interpret this chart">?</span>
+              <div class="cc-layer-tip" id="cc-layer-tip"></div>
+            </div>
+            <span class="cc-layer-view-lbl">Y-axis</span>
+            <div class="flow-mode-seg cc-layer-seg" role="tablist" aria-label="Layer chart Y-axis mode">
+              <button type="button" role="tab" data-layer-y="overlaid" aria-selected="true" onclick="setLayerChartYMode('overlaid')">Overlaid</button>
+              <button type="button" role="tab" data-layer-y="stacked" aria-selected="false" onclick="setLayerChartYMode('stacked')">Stacked</button>
+            </div>
+          </div>
+        </div>
+        <p class="cc-layer-y-caveat" id="cc-layer-y-caveat" aria-live="polite"></p>
         <div class="chart-fixed-h"><canvas id="ch-layer" height="175"></canvas></div>
       </div>
     </div>
@@ -675,15 +760,25 @@ function mkLine(id,labels,datasets,extraScales,lineOpts){
   }else{
     xScale={grid:{color:tc.grid},ticks:{maxTicksLimit:10,maxRotation:0},...(xTitleCfg?{title:xTitleCfg}:{})};
   }
+  const stacked=!!lineOpts.stacked;
+  let dsOut=datasets;
+  if(stacked&&datasets&&datasets.length){
+    dsOut=datasets.map((ds,i)=>{
+      const base={...ds,stack:'inflight'};
+      if(i===0)return{...base,fill:ds.fill!==undefined?ds.fill:'origin'};
+      return{...base,fill:ds.fill!==undefined?ds.fill:'-1'};
+    });
+  }
+  const yScale={beginAtZero:true,stacked:!!stacked,grid:{color:tc.grid},ticks:yTicks};
   const plugins={legend:{display:datasets.length>1},...chartTooltipYFormat(yFmt)};
   if(useXTime){
     plugins.tooltip=plugins.tooltip||{};
     plugins.tooltip.callbacks=plugins.tooltip.callbacks||{};
     plugins.tooltip.callbacks.title=items=>fmtChartTooltipTime(xTs[items[0].dataIndex]);
   }
-  CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets},options:{
+  CHARTS[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets:dsOut},options:{
     responsive:true,maintainAspectRatio:maintainAR,interaction:{mode:'index',intersect:false},
-    scales:{x:xScale,y:{beginAtZero:true,grid:{color:tc.grid},ticks:yTicks},...(extraScales||{})},
+    scales:{x:xScale,y:yScale,...(extraScales||{})},
     plugins
   }});
 }
@@ -851,7 +946,136 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 function inpTdDur(ms,css){const n=Number(ms)||0;return'<td class="num" style="'+(css||'')+'" title="'+n+' ms (exact)">'+fmtDurationMs(n)+'</td>';}
 function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
 function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
+function minKey(rows,k){return rows.length?Math.min(...rows.map(r=>Number(r[k])||0)):0;}
 function avgKey(rows,k){return rows.length?rows.reduce((s,r)=>s+(Number(r[k])||0),0)/rows.length:0;}
+/** Sample mean and sample std-dev for one numeric series (std 0 when n&lt;2). */
+function seriesMeanStd(vals){
+  const n=vals.length;
+  if(!n)return{mean:0,std:0};
+  const mean=vals.reduce((s,x)=>s+x,0)/n;
+  if(n===1)return{mean,std:0};
+  const v=vals.reduce((s,x)=>{const d=x-mean;return s+d*d;},0)/(n-1);
+  return{mean,std:Math.sqrt(Math.max(0,v))};
+}
+/**
+ * Pooled relative spread: mean of per-series CV (σ/μ) for backlog gauges where μ>0.
+ * Interprets how bursty the window was vs a flat line.
+ */
+function pooledCvAlpha(A,B){
+  const cvs=[];
+  if(A&&A.length)['FB_ACTIVE','OUT_ACTIVE'].forEach(k=>{
+    const vals=A.map(r=>Number(r[k])||0);
+    const{mean,std}=seriesMeanStd(vals);
+    if(mean>1e-3)cvs.push(std/mean);
+  });
+  if(B&&B.length)['PIPE_ACTIVE','Q_FILLED'].forEach(k=>{
+    const vals=B.map(r=>Number(r[k])||0);
+    const{mean,std}=seriesMeanStd(vals);
+    if(mean>1e-3)cvs.push(std/mean);
+  });
+  if(!cvs.length)return null;
+  return cvs.reduce((a,b)=>a+b,0)/cvs.length;
+}
+const FLOW_MODE_STORAGE_KEY='inputAnalyzer.flowMode';
+const FLOW_MODES=['latest','worst','best','mean'];
+function getFlowMode(){
+  try{
+    const v=localStorage.getItem(FLOW_MODE_STORAGE_KEY);
+    if(FLOW_MODES.includes(v))return v;
+  }catch(e){}
+  return'latest';
+}
+function setFlowMode(m){
+  if(!FLOW_MODES.includes(m))return;
+  try{localStorage.setItem(FLOW_MODE_STORAGE_KEY,m);}catch(e){}
+  syncFlowModeSeg();
+  const sel=document.getElementById('comp-sel');
+  if(sel&&sel.value)renderComp(sel.value);
+}
+function syncFlowModeSeg(){
+  const mode=getFlowMode();
+  document.querySelectorAll('.flow-mode-seg [data-flow-mode]').forEach(btn=>{
+    const on=btn.getAttribute('data-flow-mode')===mode;
+    btn.setAttribute('aria-selected',on?'true':'false');
+  });
+}
+
+const LAYER_Y_STORAGE_KEY='inputAnalyzer.layerChartY';
+const LAYER_Y_MODES=['overlaid','stacked'];
+function getLayerChartYMode(){
+  try{
+    const v=localStorage.getItem(LAYER_Y_STORAGE_KEY);
+    if(LAYER_Y_MODES.includes(v))return v;
+  }catch(e){}
+  return'overlaid';
+}
+function setLayerChartYMode(m){
+  if(!LAYER_Y_MODES.includes(m))return;
+  try{localStorage.setItem(LAYER_Y_STORAGE_KEY,m);}catch(e){}
+  syncLayerChartYSeg();
+  const sel=document.getElementById('comp-sel');
+  if(sel&&sel.value)renderComp(sel.value);
+}
+function syncLayerChartYSeg(){
+  const mode=getLayerChartYMode();
+  document.querySelectorAll('.cc-layer-seg [data-layer-y]').forEach(btn=>{
+    btn.setAttribute('aria-selected',btn.getAttribute('data-layer-y')===mode?'true':'false');
+  });
+}
+
+/** Rich help for the in-flight layer chart (injected into #cc-layer-tip). */
+function layerChartHelpHtml(){
+  return'<div class="lht">What you are looking at</div>'+
+  'Each line is a <strong>gauge snapshot every '+STALL_PERSIST.sampleS+'s</strong>: how many events are <em>currently</em> held in the filebeat input buffer (FB_ACTIVE), in the beat pipeline (PIPE_ACTIVE), or in-flight to the output worker (OUT_ACTIVE). They are <strong>parallel stages</strong>, not three slices of one additive total &mdash; the same event is not counted on all three lines at once.'+
+  '<div class="lht">How we infer where a stall is</div>'+
+  '<ul>'+
+  '<li><strong>Cross-read the lines</strong> at the same time index: whichever layer stays high while throughput (ACKED) is flat at zero usually owns the bottleneck.</li>'+
+  '<li><strong>Use the queue chart</strong> (Q_FILLED / Q_PCT) below: a full queue with OUT_ACTIVE high often points to output or ES; a full queue with OUT_ACTIVE near zero points to pipeline not draining into the output worker.</li>'+
+  '<li><strong>Match the stall banner / Issues list</strong>: this chart is the visual counterpart to those classifications.</li>'+
+  '</ul>'+
+  '<div class="lht">Typical shapes (zero throughput)</div>'+
+  '<ul>'+
+  '<li><strong>Input / buffer stall</strong> &mdash; FB_ACTIVE elevated or climbing while PIPE_ACTIVE and OUT_ACTIVE stay low; queue may be empty because nothing reaches it.</li>'+
+  '<li><strong>Pipeline stall</strong> &mdash; PIPE_ACTIVE high, OUT_ACTIVE hugging zero (worker not taking from queue); FB may fall as the input buffer drains into the blocked pipeline.</li>'+
+  '<li><strong>Output / &ldquo;deadlock&rdquo; signature</strong> &mdash; OUT_ACTIVE high with queue pressure high; FB/PIPE may dip if the queue backs up toward the output.</li>'+
+  '<li><strong>Idle or quiet source</strong> &mdash; all three gauges near zero for the whole window with no acks (see idle-tail banner); harvesters may still be open at EOF.</li>'+
+  '</ul>'+
+  '<div class="lht">Overlaid vs stacked</div>'+
+  '<strong>Overlaid</strong> (default) shows each gauge at its true scale &mdash; best for exact backlog per layer. <strong>Stacked</strong> adds the three values at each timestamp so you can see <em>which layer dominates</em> the vertical space and how combined pressure evolves; the stacked total is <strong>not</strong> a physical &ldquo;events in one pipe&rdquo; count. Prefer overlaid when comparing absolute levels.';
+}
+/** Roll-up values for the Event flow strip (queue from B, input/output in-flight from A). */
+function pickFlowRollup(A,B,mode){
+  const z={fbAct:0,outAct:0,pipeAct:0,qFill:0,qMax:3200,qPct:0};
+  if(!A.length&&!B.length)return z;
+  const lastA=A.length?A[A.length-1]:{};
+  const lastB=B.length?B[B.length-1]:{};
+  function pick(rows,k){
+    if(!rows.length)return 0;
+    if(mode==='latest')return Number(rows[rows.length-1][k])||0;
+    if(mode==='worst')return maxKey(rows,k);
+    if(mode==='best')return minKey(rows,k);
+    return avgKey(rows,k);
+  }
+  const fbAct=A.length?pick(A,'FB_ACTIVE'):0;
+  const outAct=A.length?pick(A,'OUT_ACTIVE'):0;
+  const pipeAct=B.length?pick(B,'PIPE_ACTIVE'):0;
+  const qFill=B.length?pick(B,'Q_FILLED'):0;
+  let qMax=B.length?pick(B,'Q_MAX'):0;
+  if(!qMax)qMax=Number(lastB.Q_MAX)||3200;
+  const qPct=B.length?pick(B,'Q_PCT'):0;
+  return{fbAct,outAct,pipeAct,qFill,qMax,qPct};
+}
+function flowMetricSub(mode,metric){
+  if(mode==='latest'){
+    if(metric==='fb')return'FB_ACTIVE';
+    if(metric==='q')return'% full';
+    if(metric==='out')return'OUT_ACTIVE';
+    return'';
+  }
+  if(mode==='worst')return metric==='q'?'peak %':'peak';
+  if(mode==='best')return metric==='q'?'min %':'min';
+  return metric==='q'?'mean %':'mean';
+}
 function byComp(rows,cid){if(!rows||!cid)return[];const c=String(cid).trim();return rows.filter(r=>String(r.COMPONENT_ID||'').trim()===c);}
 /** Latest-interval input processing status; same rules as the per-component table. */
 function computeInputProcStatus(rowsForOneInput){
@@ -1241,23 +1465,34 @@ function stallPersistHtml(stallLayer,p,tier){
 }
 
 function flowPersistText(opts){
-  const{isStalled,stallLayer,idleTailPattern,p,tier,totAck}=opts;
+  const{isStalled,stallLayer,idleTailPattern,p,tier,totAck,flowMode}=opts;
   const ss=STALL_PERSIST.sampleS+'s';
+  const rollIntro=flowMode==='latest'
+    ?'Strip values = <b>latest</b> '+ss+' sample per series.'
+    :flowMode==='worst'
+    ?'Strip values = <b>peak</b> (max) per series across the window.'
+    :flowMode==='best'
+    ?'Strip values = <b>minimum</b> per series (calmest interval each gauge saw).'
+    :'Strip values = <b>mean</b> per series across all '+ss+' samples.';
+  const ackLine='Acked stays the <b>sum</b> over the window in every mode.';
+  const spreadHint=' <b>Spread (CV\u0304)</b> on the line under the roll-up averages relative variability (\u03c3/\u03bc) across the four backlog series where \u03bc&gt;0; hover that label for detail.';
   if(isStalled&&idleTailPattern)
-    return'Latest gauges at window end. Idle / EOF tail pattern applies to the full capture when harvesters stayed up with no publishes &mdash; not a short spike.';
+    return(flowMode==='latest'
+      ?'Latest gauges at window end. '
+      :rollIntro+' ')+'Idle / EOF tail pattern applies to the full capture when harvesters stayed up with no publishes &mdash; not a short spike. '+ackLine+spreadHint;
   if(isStalled&&stallLayer==='deadlock'&&(!p||!p.hits)&&!idleTailPattern)
-    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. <span class="pt-tag pt-moderate">Timing offset</span> Stall classification uses window averages; no aligned sample had both OUT&gt;0 and queue \u226580% full in the same 30\u00a0s row. Use <i>Event flow by layer</i> to see whether in-flight events and queue pressure overlap in time.';
+    return rollIntro+' '+ackLine+' <span class="pt-tag pt-moderate">Timing offset</span> Stall classification uses window averages; no aligned sample had both OUT&gt;0 and queue \u226580% full in the same 30\u00a0s row. Use <i>Event flow by layer</i> to see whether in-flight events and queue pressure overlap in time.'+spreadHint;
   if(isStalled&&stallLayer&&p&&p.hits){
     const tag=tier==='sustained'?'Sustained':tier==='transient'?'Episodic':'Intermittent';
     const t0=hhmmFromTs(p.tsStart),t1=hhmmFromTs(p.tsEnd);
     const worst=t0&&t1?' Worst span ~'+t0+'\u2013'+t1+' UTC.':'';
-    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. '+tag+' stall signature: '+Math.round(p.coverage*100)+'% of samples, longest run '+fmtDurMinSec(p.longestRun*STALL_PERSIST.sampleS)+'.'+worst+
+    return rollIntro+' '+ackLine+' '+tag+' stall signature: '+Math.round(p.coverage*100)+'% of samples, longest run '+fmtDurMinSec(p.longestRun*STALL_PERSIST.sampleS)+'.'+worst+
       (p.stillAtEnd?' Still matched at end.':' Cleared before end.')+
-      ' Use <i>Event flow by layer</i> for the full timeline.';
+      ' Use <i>Event flow by layer</i> for the full timeline.'+spreadHint;
   }
   if(totAck>0)
-    return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. Throughput present &mdash; chart below shows how pressure moved across layers over time.';
-  return'Nodes use the <b>latest</b> '+ss+' row; Acked is the <b>sum</b> over the window. For persistence of pressure vs one-sample noise, use <i>Event flow by layer</i> below.';
+    return rollIntro+' '+ackLine+' Throughput present &mdash; chart below shows how pressure moved across layers over time.'+spreadHint;
+  return rollIntro+' '+ackLine+' For persistence of pressure vs one-sample noise, use <i>Event flow by layer</i> below.'+spreadHint;
 }
 
 function resetAll(){
@@ -1274,6 +1509,7 @@ function resetAll(){
   const t=document.getElementById('inp-ov-tiles');if(t)t.innerHTML='';
   const g=document.getElementById('inp-ov-groups');if(g)g.innerHTML='';
   const fp=document.getElementById('flow-persist');if(fp)fp.innerHTML='';
+  const fw=document.getElementById('flow-var-wrap');if(fw)fw.innerHTML='';
   document.getElementById('hdr-status').textContent='no data loaded';
   document.getElementById('go-btn').disabled=true;
   document.getElementById('go-btn').textContent='Drop files to begin \u2192';
@@ -1337,10 +1573,16 @@ function renderComp(cid){
     :'';
 
   const lastA=A.length?A[A.length-1]:{},lastB=B.length?B[B.length-1]:{};
-  const fbAct=Number(lastA.FB_ACTIVE||0);
-  const outAct=Number(lastA.OUT_ACTIVE||0);
-  const pipeAct=Number(lastB.PIPE_ACTIVE||0);
-  const qFill=Number(lastB.Q_FILLED||0),qMax=Number(lastB.Q_MAX||3200),qPct=Number(lastB.Q_PCT||0);
+  const outLatest=Number(lastA.OUT_ACTIVE||0);
+  const pipeLatest=Number(lastB.PIPE_ACTIVE||0);
+  const qPctLatest=Number(lastB.Q_PCT||0);
+
+  const flowMode=getFlowMode();
+  syncFlowModeSeg();
+  const fr=pickFlowRollup(A,B,flowMode);
+  const fbAct=fr.fbAct,outAct=fr.outAct,pipeAct=fr.pipeAct,qFill=fr.qFill,qMax=fr.qMax,qPct=fr.qPct;
+  const pooledCv=pooledCvAlpha(A,B);
+  const flowNumDp=flowMode==='mean'?1:0;
 
   // STALL BANNER (deadlock / pipeline: same diagnosis as Issues list + event-flow blurb — hide banner to avoid duplicate)
   const banner=document.getElementById('stall-banner');
@@ -1395,35 +1637,47 @@ function renderComp(cid){
   // PIPELINE FLOW DIAGRAM
   const fd=document.getElementById('flow-diagram');
   const flowPersistEl=document.getElementById('flow-persist');
-  if(flowPersistEl)flowPersistEl.innerHTML=flowPersistText({isStalled,stallLayer,idleTailPattern,p:stallPersist,tier:stallTier,totAck});
+  const flowVarEl=document.getElementById('flow-var-wrap');
+  if(flowPersistEl)flowPersistEl.innerHTML=flowPersistText({isStalled,stallLayer,idleTailPattern,p:stallPersist,tier:stallTier,totAck,flowMode});
   if(A.length||B.length){
     fd.style.display='block';
+    if(flowVarEl){
+      const tip='Pooled relative spread: average of CV (\u03c3/\u03bc) over FB_ACTIVE, OUT_ACTIVE, PIPE_ACTIVE, and Q_FILLED wherever \u03bc>0. High % means those series swing widely vs their mean (bursty backlog); near 0 means steady levels or a flat line.';
+      if(pooledCv!=null)
+        flowVarEl.innerHTML='<abbr title="'+escAttr(tip)+'">Spread (CV\u0304)</abbr>: <strong>'+fmt(pooledCv*100,0)+'%</strong>';
+      else
+        flowVarEl.innerHTML='<abbr title="No series had a positive mean, so CV is undefined (often an all-quiet window).">Spread (CV\u0304)</abbr>: <strong>\u2014</strong>';
+    }
     const row=document.getElementById('flow-row');
-    function fv(n,t1,t2){if(n===0)return{v:fmt(n),c:'dim'};if(n>=t2)return{v:fmt(n),c:'crit'};if(n>=t1)return{v:fmt(n),c:'warn'};return{v:fmt(n),c:'ok'};}
+    function fv(n,t1,t2){const disp=flowNumDp?fmt(n,1):fmt(n);if(n===0)return{v:disp,c:'dim'};if(n>=t2)return{v:disp,c:'crit'};if(n>=t1)return{v:disp,c:'warn'};return{v:disp,c:'ok'};}
     const fbV=fv(fbAct,1000,5000);
-    const qV={v:fmt(qFill)+(qMax?'/'+fmt(qMax):''),c:qPct>=1?'crit':qPct>=0.8?'warn':qPct>0?'ok':'dim'};
+    const qFillStr=flowNumDp?fmt(qFill,1):fmt(qFill);
+    const qMaxStr=flowNumDp?fmt(qMax,1):fmt(qMax);
+    const qV={v:qFillStr+(qMax?'/'+qMaxStr:''),c:qPct>=1?'crit':qPct>=0.8?'warn':qPct>0?'ok':'dim'};
     const oV=fv(outAct,100,3000);
     const ackV={v:fmt(totAck),c:totAck>0?'ok':idleTailPattern?'warn':'crit'};
     const a1Cls=idleTailPattern?'idle-tail':stallLayer==='input'?'blocked':fbAct>0?'flowing':'';
     const a2Cls=stallLayer==='pipeline'?'blocked':pipeAct>0?'flowing':'';
     const a3Cls=stallLayer==='deadlock'?'blocked':outAct>0?'flowing':'';
+    const qPctStr=flowMode==='mean'?fmt(qPct*100,1):String(Math.round(qPct*100));
+    const qSub=flowMode==='latest'?qPctStr+'% full':qPctStr+'% · '+flowMetricSub(flowMode,'q');
     row.innerHTML=`
-      <div class="flow-node"><div class="fn-label">Input buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">FB_ACTIVE</div></div>
+      <div class="flow-node"><div class="fn-label">Input buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">${flowMetricSub(flowMode,'fb')}</div></div>
       <div class="flow-arrow"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1Cls==='blocked'?'&#10006; blocked':a1Cls==='idle-tail'?'EOF idle':a1Cls==='flowing'?'&#10004;':''}</div></div>
-      <div class="flow-node"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${Math.round(qPct*100)}% full</div></div>
+      <div class="flow-node"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${qSub}</div></div>
       <div class="flow-arrow"><div class="fa-line ${a2Cls}"></div><div class="fa-label ${a2Cls}">${a2Cls==='blocked'?'&#10006; blocked':a2Cls==='flowing'?'&#10004;':''}</div></div>
-      <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">OUT_ACTIVE</div></div>
+      <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">${flowMetricSub(flowMode,'out')}</div></div>
       <div class="flow-arrow"><div class="fa-line ${a3Cls}"></div><div class="fa-label ${a3Cls}">${a3Cls==='blocked'?'&#10006; ES not acking':a3Cls==='flowing'?'&#10004;':''}</div></div>
       <div class="flow-node"><div class="fn-label">Acked</div><div class="fn-val ${ackV.c}">${ackV.v}</div><div class="fn-sub">this window</div></div>`;
-  }else{fd.style.display='none';if(flowPersistEl)flowPersistEl.innerHTML='';}
+  }else{fd.style.display='none';if(flowPersistEl)flowPersistEl.innerHTML='';if(flowVarEl)flowVarEl.innerHTML='';}
 
   // HEALTH GRID
   if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
   if(B.length){
-    mkHealth(qPct>=1?'&#128308;':qPct>=0.8?'&#128993;':'&#9989;','Queue',qPct>=1?'crit':qPct>=0.8?'warn':'ok');
+    mkHealth(qPctLatest>=1?'&#128308;':qPctLatest>=0.8?'&#128993;':'&#9989;','Queue',qPctLatest>=1?'crit':qPctLatest>=0.8?'warn':'ok');
     mkHealth(Number(lastB.CLIENTS||0)===0?'&#10060;':'&#9989;','Pipeline',Number(lastB.CLIENTS||0)===0?'crit':'ok');
   }
-  if(A.length)mkHealth(outAct>0&&totAck===0&&A.length>5?'&#128308;':'&#9989;','Output',outAct>0&&totAck===0&&A.length>5?'crit':'ok');
+  if(A.length)mkHealth(outLatest>0&&totAck===0&&A.length>5?'&#128308;':'&#9989;','Output',outLatest>0&&totAck===0&&A.length>5?'crit':'ok');
   if(C.length){
     const rss=C.map(r=>Number(r.RSS_MB)||0).filter(v=>v>0);
     mkHealth(rss.length>1&&rss[rss.length-1]-rss[0]>50?'&#128993;':'&#9989;','Memory',rss.length>1&&rss[rss.length-1]-rss[0]>50?'warn':'ok');
@@ -1449,7 +1703,7 @@ function renderComp(cid){
     if(isStalled&&stallLayer==='deadlock'){
       const ephem=stallTier==='transient';
       const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
-      const body='OUT_ACTIVE='+fmt(outAct)+' with ACKED=0 across ~'+winM+' min. '+
+      const body='OUT_ACTIVE='+fmt(outLatest)+' with ACKED=0 across ~'+winM+' min. '+
         (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
         'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
         '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.';
@@ -1459,7 +1713,7 @@ function renderComp(cid){
     if(isStalled&&stallLayer==='pipeline'){
       const ephem=stallTier==='transient';
       const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
-      const body='PIPE_ACTIVE='+fmt(pipeAct)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+' min. '+
+      const body='PIPE_ACTIVE='+fmt(pipeLatest)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+' min. '+
         (ephem?'Per-interval pipeline\u2192output stall signature was brief; re-capture if you need proof of a chronic drain issue. ':'')+
         'Events are queued in the pipeline but the output worker is not taking them. Check output config, connectivity to ES/Logstash, and output worker health in beat logs.';
       if(ephem)warnAlerts.push(['warn','Pipeline\u2192output stall (episodic signature)',body]);
@@ -1720,18 +1974,36 @@ function renderComp(cid){
 
   // Layer flow chart — key stall diagnosis chart
   if(A.length||B.length){
+    const layerTip=document.getElementById('cc-layer-tip');
+    if(layerTip)layerTip.innerHTML=layerChartHelpHtml();
+    const layerCaveat=document.getElementById('cc-layer-y-caveat');
+    const layerStacked=getLayerChartYMode()==='stacked';
+    syncLayerChartYSeg();
+    if(layerCaveat){
+      layerCaveat.classList.toggle('on',layerStacked);
+      layerCaveat.textContent=layerStacked
+        ?'Stacked Y-axis: values at each time are summed (FB + pipeline + output). That sum is a visual composite for comparing which layers spike together; it is not a single real-world queue depth. Use Overlaid for literal per-layer counts.'
+        :'';
+    }
     const layerSrc=A.length?A:B;
     const layerTs=layerSrc.map(r=>r.TIMESTAMP);
     const layerLab=chartPlaceholderLabels(layerTs.length);
     const layerRange=xAxisRangeTitle(layerTs[0],layerTs[layerTs.length-1]);
     const layerXOpts={xTimestamps:layerTs,xRangeTitle:layerRange,xAxisTickCount:18};
     const ds=[];
-    if(A.length){
-      ds.push({label:'FB_ACTIVE (input buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.06)',fill:true});
-      ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.06)',fill:true});
-    }
-    if(B.length)ds.push({label:'PIPE_ACTIVE (pipeline)',data:B.map(r=>Number(r.PIPE_ACTIVE)||0),borderColor:'#00d4ff'});
-    mkLine('ch-layer',layerLab,ds,null,{maintainAspectRatio:false,yFormat:'compactNum',...layerXOpts});
+    if(A.length)
+      ds.push({label:'FB_ACTIVE (input buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.12)',fill:true});
+    if(B.length)
+      ds.push({
+        label:'PIPE_ACTIVE (pipeline)',
+        data:B.map(r=>Number(r.PIPE_ACTIVE)||0),
+        borderColor:'#00d4ff',
+        backgroundColor:layerStacked?'rgba(0,212,255,.14)':undefined,
+        fill:layerStacked?true:undefined
+      });
+    if(A.length)
+      ds.push({label:'OUT_ACTIVE (output inflight)',data:A.map(r=>Number(r.OUT_ACTIVE)||0),borderColor:'#ff2d55',backgroundColor:'rgba(255,45,85,.12)',fill:true});
+    mkLine('ch-layer',layerLab,ds,null,{maintainAspectRatio:false,yFormat:'compactNum',stacked:layerStacked,...layerXOpts});
   }
 
   if(B.length){
@@ -1860,6 +2132,8 @@ function renderComp(cid){
 }
 
 (function(){
+  syncFlowModeSeg();
+  syncLayerChartYSeg();
   const tb=document.getElementById('theme-toggle');
   if(tb)tb.addEventListener('click',()=>setUiTheme(getUiTheme()==='dark'?'light':'dark'));
   syncThemeToggle();
