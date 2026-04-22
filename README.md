@@ -1,5 +1,7 @@
 # Elastic Agent input performance analyzer
 
+**Live Working DEMO**: https://rseldner.github.io/elastic-agent-input-perf-analyzer/input-analyzer.html
+
 Analyze Elastic Agent diagnostic data with a single browser dashboard: `input-analyzer.html`.
 
 It supports both:
