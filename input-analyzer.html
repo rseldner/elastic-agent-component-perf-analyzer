@@ -53,6 +53,16 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .logo-mark{width:28px;height:28px;background:linear-gradient(135deg,#00d4ff,#7c5cfc);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
 .logo-name{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em}
 .logo-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.repo-link{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
+  color:var(--mid);text-decoration:none;
+  padding:7px 10px;border:1px solid var(--bdr2);border-radius:8px;
+  background:var(--surf2);
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.repo-link:hover{border-color:rgba(0,212,255,.35);color:var(--text);background:var(--reload-hover-bg)}
+[data-theme="light"] .repo-link:hover{border-color:rgba(0,124,170,.35)}
+.logo-text{display:flex;flex-direction:column}
 #hdr-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bdr2);color:var(--dim)}
 #pg-upload{max-width:700px;margin:60px auto;padding:0 28px}
 .upload-h{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;margin-bottom:8px}
@@ -412,7 +422,8 @@ table.itbl tr:hover td{background:var(--surf2)}
 <header>
   <div class="logo">
     <div class="logo-mark">&#9889;</div>
-    <div><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Metrics Analyzer</div></div>
+    <div class="logo-text"><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Metrics Analyzer</div></div>
+    <a class="repo-link" href="https://github.com/rseldner/elastic-agent-input-perf-analyzer" target="_blank" rel="noopener noreferrer" aria-label="Open project repository on GitHub">GitHub Repo</a>
   </div>
   <div class="hdr-actions">
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme"></button>
