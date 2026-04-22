@@ -423,15 +423,20 @@ table.itbl tr:hover td{background:var(--surf2)}
 <div id="pg-upload">
   <div class="upload-h">Load diagnostic output</div>
   <p class="upload-sub">
-    Drop the <code>perf-analysis-*</code> folder from <code>elastic-agent-perf.sh</code>, or click to pick files.<br>
-    Auto-detected by prefix: <code>A-output-health</code> &middot; <code>B-pipeline-queue</code> &middot; <code>C-beat-resources</code> &middot; <code>D-input-processing</code> &middot; <code>E-health-ratios</code>
+    Drop either the <code>perf-analysis-*</code> folder from <code>elastic-agent-perf.sh</code> or raw <code>elastic-agent-*.ndjson</code> logs.<br>
+    The analyzer auto-detects format and opens the same dashboard.
   </p>
   <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
     <div class="dz-icon">&#128194;</div>
-    <div class="dz-title">Drop the perf-analysis folder here</div>
-    <div class="dz-hint">Or click to browse files. Any subset of A&ndash;E works &mdash; missing tables are skipped gracefully.</div>
+    <div class="dz-title">Drop TSV or NDJSON files/folders here</div>
+    <div class="dz-hint">TSV auto-detects A&ndash;E prefixes. NDJSON auto-detects <code>elastic-agent-*.ndjson</code>. Missing tables are skipped gracefully.</div>
   </div>
-  <input type="file" id="file-input" multiple accept=".tsv,.txt" onchange="loadFiles(this.files)">
+  <input type="file" id="file-input" multiple accept=".tsv,.txt,.ndjson,.json,application/x-ndjson,text/plain" onchange="loadSelection(this.files)">
+  <input type="file" id="dir-input" multiple webkitdirectory directory style="display:none" onchange="loadSelection(this.files)">
+  <div style="display:flex;gap:10px;margin:0 0 18px;justify-content:center;flex-wrap:wrap">
+    <button type="button" class="reload-btn" onclick="document.getElementById('file-input').click()">Pick files&hellip;</button>
+    <button type="button" class="reload-btn" onclick="document.getElementById('dir-input').click()">Pick folder&hellip;</button>
+  </div>
   <div class="fgrid">
     <div class="fs" id="fs-A"><div class="fs-key">A &middot; Output</div><div class="fs-name">not loaded</div></div>
     <div class="fs" id="fs-B"><div class="fs-key">B &middot; Pipeline</div><div class="fs-name">not loaded</div></div>
@@ -592,6 +597,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 const DATA={A:null,B:null,C:null,D:null,E:null};
 const CHARTS={};
 const PREFIX_MAP={'A-output-health':'A','B-pipeline-queue':'B','C-beat-resources':'C','D-input-processing':'D','E-health-ratios':'E'};
+let SOURCE_MODE=null; // 'tsv' | 'ndjson' | null
 
 // PARSER — column -t uses spaces not tabs, split on 2+ spaces
 function parseTSV(text){
@@ -612,7 +618,41 @@ function detectKey(fn){
   return null;
 }
 
-function loadFiles(fl){
+function ndjsonBasenameOk(name){
+  const base=String(name||'').split('/').pop();
+  return/^elastic-agent-.+\.ndjson$/i.test(base);
+}
+
+function num(v){const n=Number(v);return isFinite(n)?n:0;}
+function rnd(v){return Math.round(num(v));}
+
+function clearLoadedData(){
+  ['A','B','C','D','E'].forEach(key=>{
+    DATA[key]=null;
+    const s=document.getElementById('fs-'+key);
+    s.classList.remove('ok');
+    s.querySelector('.fs-name').textContent='not loaded';
+  });
+}
+
+function applyParsedTables(A,B,C,D,E,sourceLabel){
+  sortMetricRows(A);sortMetricRows(B);sortMetricRows(C);sortMetricRows(D);sortMetricRows(E);
+  DATA.A=A.length?A:null;
+  DATA.B=B.length?B:null;
+  DATA.C=C.length?C:null;
+  DATA.D=D.length?D:null;
+  DATA.E=E.length?E:null;
+  ['A','B','C','D','E'].forEach(key=>{
+    const s=document.getElementById('fs-'+key);
+    s.classList.toggle('ok',!!DATA[key]);
+    s.querySelector('.fs-name').textContent=DATA[key]?`${DATA[key].length} rows`:'not loaded';
+  });
+  refreshBtn(sourceLabel);
+}
+
+function loadTSVFiles(fl){
+  clearLoadedData();
+  SOURCE_MODE='tsv';
   Array.from(fl).forEach(f=>{
     const key=detectKey(f.name); if(!key)return;
     const r=new FileReader();
@@ -621,12 +661,209 @@ function loadFiles(fl){
   });
 }
 
-function refreshBtn(){
-  const n=Object.values(DATA).filter(Boolean).length;
+function getCid(o){
+  const v=o['component.id']!=null?o['component.id']:(o.component&&o.component.id);
+  if(v==null||v==='')return null;
+  return String(v);
+}
+
+function buildRowA(ts,cid,m){
+  const lb=m.libbeat;if(!lb)return null;
+  const out=lb.output||{};
+  const ev=out.events||{};
+  const lat=(out.write&&out.write.latency&&out.write.latency.histogram)||{};
+  const fbEv=(m.filebeat&&m.filebeat.events)||{};
+  const wr=out.write||{};
+  const rd=out.read||{};
+  return{
+    TIMESTAMP:ts,COMPONENT_ID:cid,
+    ACKED:num(ev.acked),FAILED:num(ev.failed),'429s':num(ev.toomany),DROPPED:num(ev.dropped),DUPES:num(ev.duplicates),
+    FB_ACTIVE:num(fbEv.active),
+    OUT_ACTIVE:num(ev.active),BATCHES:num(ev.batches),WRITE_B:num(wr.bytes),READ_B:num(rd.bytes),
+    LAT_MEAN:num(lat.mean),LAT_MED:num(lat.median),LAT_P95:num(lat.p95),LAT_P99:num(lat.p99),LAT_P999:num(lat.p999),LAT_MAX:num(lat.max),
+    WRITE_ERR:num(wr.errors),READ_ERR:num(rd.errors)
+  };
+}
+
+function buildRowB(ts,cid,lb){
+  const pip=lb.pipeline||{};
+  const pev=pip.events||{};
+  const q=pip.queue||{};
+  const qf=q.filled||{};
+  const qa=q.added||{};
+  const qr=q.removed||{};
+  const cfg=lb.config||{};
+  const mod=cfg.module||{};
+  return{
+    TIMESTAMP:ts,COMPONENT_ID:cid,
+    CLIENTS:num(pip.clients),PIPE_ACTIVE:num(pev.active),PUBLISHED:num(pev.published),FILTERED:num(pev.filtered),
+    RETRY:num(pev.retry),DROPPED:num(pev.dropped),
+    Q_FILLED:num(qf.events),Q_MAX:num(q.max_events),Q_PCT:num(qf.pct),
+    Q_ADDED:num(qa.events),Q_REMOVED:num(qr.events),
+    MODULES:num(mod.running)
+  };
+}
+
+function buildRowC(ts,cid,m){
+  const b=m.beat;if(!b)return null;
+  const mi=b.info||{};
+  const cpu=b.cpu||{};
+  const tot=cpu.total||{},usr=cpu.user||{},sys=cpu.system||{};
+  const ms=b.memstats||{};
+  const fb=m.filebeat||{};
+  const hv=fb.harvester||{};
+  const reg=fb.registrar||{};
+  const st=reg.states||{};
+  const hdl=b.handles||{};
+  const regVal=num(st.current);
+  return{
+    TIMESTAMP:ts,COMPONENT_ID:cid,
+    VERSION:mi.version!=null?String(mi.version):'',
+    UPTIME_s:rnd(num(mi.uptime&&mi.uptime.ms)/1000),
+    CPU_TOTAL_ms:num(tot.time&&tot.time.ms),CPU_USER_ms:num(usr.time&&usr.time.ms),CPU_SYS_ms:num(sys.time&&sys.time.ms),
+    MEM_ALLOC_MB:rnd(num(ms.memory_alloc)/1048576),RSS_MB:rnd(num(ms.rss)/1048576),
+    GOROUTINES:num(b.runtime&&b.runtime.goroutines),
+    HARV_RUNNING:num(hv.running),HARV_FILES:num(hv.open_files),
+    FD_OPEN:num(hdl.open),FD_LIMIT:num(hdl.limit),REGISTRAR:regVal>0?regVal:''
+  };
+}
+
+function buildRowD(ts,cid,iid,h){
+  return{
+    TIMESTAMP:ts,COMPONENT_ID:cid,INPUT_ID:String(iid),
+    COUNT:num(h.count),
+    MEAN_ms:rnd(num(h.mean)/1e6),MEDIAN_ms:rnd(num(h.median)/1e6),P95_ms:rnd(num(h.p95)/1e6),P99_ms:rnd(num(h.p99)/1e6),
+    MAX_ms:rnd(num(h.max)/1e6),STDDEV_ms:rnd(num(h.stddev)/1e6)
+  };
+}
+
+function buildRowE(ts,cid,lb){
+  const ev=lb.output&&lb.output.events||{};
+  const pip=lb.pipeline||{};
+  const pev=pip.events||{};
+  const qf=(pip.queue&&pip.queue.filled)||{};
+  const acked=num(ev.acked),failed=num(ev.failed),toomany=num(ev.toomany),dropped=num(ev.dropped),dupes=num(ev.duplicates);
+  const batches=num(ev.batches),retry=num(pev.retry),pub=num(pev.published);
+  const qpct=num(qf.pct);
+  const total=acked+failed+dropped+dupes;
+  return{
+    TIMESTAMP:ts,COMPONENT_ID:cid,TOTAL:total,ACKED:acked,
+    'SUCCESS_%':total>0?Math.round(acked/total*1000)/10:0,
+    '429_%':total>0?Math.round(toomany/total*10000)/100:0,
+    'DROP_%':total>0?Math.round(dropped/total*10000)/100:0,
+    'DUPE_%':total>0?Math.round(dupes/total*10000)/100:0,
+    'RETRY_%':pub>0?Math.round(retry/pub*10000)/100:0,
+    AVG_BATCH:batches>0?Math.round(total/batches):0,
+    QUEUE_STATUS:qpct>=1?'FULL':qpct>=0.8?'HIGH':qpct>=0.5?'MED':'OK'
+  };
+}
+
+function extractRowsFromObject(o,A,B,C,D,E){
+  const cid=getCid(o);
+  if(!cid)return;
+  const ts=o['@timestamp'];
+  if(ts==null)return;
+  const tsStr=String(ts);
+  const mon=o.monitoring;
+  if(!mon)return;
+  const m=mon.metrics;
+  if(m&&m.libbeat){
+    const ra=buildRowA(tsStr,cid,m);
+    if(ra)A.push(ra);
+    B.push(buildRowB(tsStr,cid,m.libbeat));
+    E.push(buildRowE(tsStr,cid,m.libbeat));
+  }
+  if(m&&m.beat){
+    const rc=buildRowC(tsStr,cid,m);
+    if(rc)C.push(rc);
+  }
+  const ds=mon.dataset;
+  if(ds&&typeof ds==='object'&&!Array.isArray(ds)){
+    for(const iid of Object.keys(ds)){
+      const v=ds[iid];
+      const h=v&&v.processing_time&&v.processing_time.histogram;
+      if(h&&num(h.count)>0)D.push(buildRowD(tsStr,cid,iid,h));
+    }
+  }
+}
+
+function sortMetricRows(rows){
+  return rows.sort((a,b)=>{
+    const c=String(a.TIMESTAMP).localeCompare(String(b.TIMESTAMP));
+    if(c!==0)return c;
+    return String(a.COMPONENT_ID).localeCompare(String(b.COMPONENT_ID));
+  });
+}
+
+function parseNdjsonText(text,A,B,C,D,E){
+  const lines=String(text||'').split(/\r?\n/);
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    let o;
+    try{o=JSON.parse(line);}catch(err){continue;}
+    extractRowsFromObject(o,A,B,C,D,E);
+  }
+}
+
+function loadNdjsonFromFileList(files){
+  clearLoadedData();
+  SOURCE_MODE='ndjson';
+  const arr=Array.from(files||[]).filter(f=>ndjsonBasenameOk(f.name));
+  arr.sort((a,b)=>{
+    const pa=a.webkitRelativePath||a.name,pb=b.webkitRelativePath||b.name;
+    return pa.localeCompare(pb,undefined,{numeric:true,sensitivity:'base'});
+  });
+  if(!arr.length){
+    alert('No elastic-agent-*.ndjson files in this selection. Pick the log directory or individual NDJSON files.');
+    return;
+  }
+  const A=[],B=[],C=[],D=[],E=[];
+  const label=arr.length===1?arr[0].name.split('/').pop():arr.length+' files';
+  document.getElementById('hdr-status').textContent='parsing NDJSON...';
+  let idx=0;
+  function readNext(){
+    if(idx>=arr.length){applyParsedTables(A,B,C,D,E,label);return;}
+    const f=arr[idx++];
+    const r=new FileReader();
+    r.onload=e=>{parseNdjsonText(e.target.result,A,B,C,D,E);readNext();};
+    r.onerror=()=>readNext();
+    r.readAsText(f);
+  }
+  readNext();
+}
+
+function loadSelection(files){
+  const arr=Array.from(files||[]);
+  const hasNdjson=arr.some(f=>ndjsonBasenameOk(f.name));
+  const hasTsv=arr.some(f=>!!detectKey(f.name));
+  if(hasNdjson&&!hasTsv){loadNdjsonFromFileList(arr);return;}
+  if(hasTsv&&!hasNdjson){loadTSVFiles(arr);return;}
+  if(hasNdjson&&hasTsv){
+    const useNdjson=window.confirm('Detected both TSV and NDJSON inputs. Click OK to parse NDJSON, or Cancel to load TSV files.');
+    if(useNdjson)loadNdjsonFromFileList(arr);else loadTSVFiles(arr);
+    return;
+  }
+  alert('No recognized inputs found. Select perf TSV files (A-*.tsv...E-*.tsv) or elastic-agent-*.ndjson logs.');
+}
+
+function refreshBtn(sourceLabel){
+  const nTables=Object.values(DATA).filter(Boolean).length;
+  const nRows=Object.values(DATA).filter(Boolean).reduce((s,t)=>s+t.length,0);
   const b=document.getElementById('go-btn');
-  b.disabled=n===0;
-  b.textContent=n===0?'Drop files to begin \u2192':n<5?`Analyze \u2014 ${n}/5 files \u2192`:'Analyze \u2192';
-  document.getElementById('hdr-status').textContent=n+'/5 files';
+  b.disabled=nTables===0;
+  if(SOURCE_MODE==='ndjson'){
+    b.textContent=nRows===0?'Drop files to begin \u2192':`Analyze \u2014 ${nRows} rows \u2192`;
+  }else{
+    b.textContent=nTables===0?'Drop files to begin \u2192':nTables<5?`Analyze \u2014 ${nTables}/5 files \u2192`:'Analyze \u2192';
+  }
+  const st=document.getElementById('hdr-status');
+  if(nTables===0){st.textContent='no data loaded';return;}
+  if(SOURCE_MODE==='ndjson'){
+    st.textContent=`${nTables}/5 tables · ${nRows} rows`+(sourceLabel?' · '+sourceLabel:'');
+  }else{
+    st.textContent=`${nTables}/5 files`+(sourceLabel?' · '+sourceLabel:'');
+  }
 }
 
 const dz=document.getElementById('dropzone');
@@ -638,11 +875,18 @@ dz.addEventListener('drop',e=>{
   if(dt.items&&dt.items[0]&&dt.items[0].webkitGetAsEntry){
     const col=[];let pend=0;
     function re(entry){
-      if(entry.isFile){pend++;entry.file(f=>{col.push(f);if(!--pend)loadFiles(col);});}
-      else if(entry.isDirectory)entry.createReader().readEntries(es=>es.forEach(re));
+      if(entry.isFile){
+        pend++;
+        entry.file(f=>{col.push(f);if(!--pend)loadSelection(col);});
+      }else if(entry.isDirectory){
+        const dr=entry.createReader();
+        (function read(){
+          dr.readEntries(es=>{es.forEach(re);if(es.length)read();});
+        })();
+      }
     }
     for(let i=0;i<dt.items.length;i++){const e2=dt.items[i].webkitGetAsEntry();if(e2)re(e2);}
-  }else loadFiles(dt.files);
+  }else loadSelection(dt.files);
 });
 
 // CHART DEFAULTS — sync with CSS variables (light/dark theme)
@@ -1497,8 +1741,11 @@ function flowPersistText(opts){
 
 function resetAll(){
   Object.keys(DATA).forEach(k=>DATA[k]=null);
+  SOURCE_MODE=null;
   ['A','B','C','D','E'].forEach(k=>{const s=document.getElementById('fs-'+k);s.classList.remove('ok');s.querySelector('.fs-name').textContent='not loaded';});
   document.getElementById('file-input').value='';
+  const dirInput=document.getElementById('dir-input');
+  if(dirInput)dirInput.value='';
   Object.values(CHARTS).forEach(c=>{try{c.destroy();}catch(e){}});
   Object.keys(CHARTS).forEach(k=>delete CHARTS[k]);
   document.getElementById('pg-dash').style.display='none';

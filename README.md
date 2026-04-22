@@ -1,22 +1,25 @@
 # Elastic Agent input performance analyzer
 
-Analyze Elastic Agent diagnostic NDJSON (`elastic-agent-*.ndjson`) with either:
+Analyze Elastic Agent diagnostic data with a single browser dashboard: `input-analyzer.html`.
 
-- a shell extractor + TSV workflow (`elastic-agent-perf.sh` + `input-analyzer.html`), or
-- a standalone browser workflow (`input-analyzer-ndjson.html`) with no preprocessing step.
+It supports both:
 
-## Option 1: standalone offline browser viewer (no script required)
+- raw diagnostic NDJSON files (`elastic-agent-*.ndjson`), and
+- extracted A-E TSV outputs from `elastic-agent-perf.sh`.
 
-Open `input-analyzer-ndjson.html` in a browser and load a directory (or files) containing `elastic-agent-*.ndjson`.
+The page auto-detects the input format and renders the same charts, health cards, and stall diagnostics.
 
-- Parses NDJSON directly in-browser.
-- Builds the same A-E metric tables used by the dashboard.
-- Renders the same charts, health cards, and stall diagnostics.
-- Works as an offline viewer: analysis is fully handled by your browser on local files.
+## Option 1: direct NDJSON analysis (no script required)
+
+Open `input-analyzer.html` in a browser and load files/folders containing `elastic-agent-*.ndjson`.
+
+- NDJSON is parsed directly in-browser.
+- A-E metric tables are built in-browser.
+- Analysis remains local/offline in your browser.
 
 No `jq`, no TSV generation, and no intermediary tooling required.
 
-## Option 2: script extractor + TSV viewer
+## Option 2: extractor workflow (`elastic-agent-perf.sh` + TSV)
 
 ### Requirements
 
@@ -46,3 +49,9 @@ E-health-ratios.tsv
 ### Visualize TSV output
 
 Open `input-analyzer.html` in a browser, then drop that `perf-analysis-*` folder (or A-E `.tsv` files). Missing tables are skipped gracefully.
+
+## Sharing and sanitization note
+
+Using `elastic-agent-perf.sh` can help for sanitization scenarios: sharing only the generated TSV files is usually lower risk than sharing raw NDJSON logs.
+
+Those TSV outputs are metric-focused and typically include component IDs, timestamps, and aggregate counters/latencies rather than raw event payloads, host IPs, or secrets. Still, treat them as operational telemetry and review before sharing, since environment-specific identifiers and timing data can still be sensitive in some contexts.
