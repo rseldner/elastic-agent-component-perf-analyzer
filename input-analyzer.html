@@ -94,6 +94,7 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .dash-meta b{color:var(--mid);font-weight:500}
 .dash-comp-wrap{display:inline-flex;align-items:baseline;gap:5px;max-width:100%;vertical-align:baseline}
 .dash-comp-wrap #m-comp{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(72ch,85vw)}
+#m-version{font-weight:500;word-break:break-word;overflow-wrap:anywhere;max-width:100%}
 .dash-actions{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
 .dash-actions-col{
   flex:1;min-width:0;max-width:min(100%,860px);
@@ -603,7 +604,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 
 <div id="pg-dash">
   <div class="dash-top">
-    <div class="dash-meta">COMPONENT &nbsp;<span class="dash-comp-wrap"><b id="m-comp">&mdash;</b><button type="button" class="id-copy-btn id-copy-btn--inline" id="dash-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button></span><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
+    <div class="dash-meta">COMPONENT &nbsp;<span class="dash-comp-wrap"><b id="m-comp">&mdash;</b><button type="button" class="id-copy-btn id-copy-btn--inline" id="dash-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button></span><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b><br>VERSION &nbsp;<b id="m-version" title="Beat version string from the latest metrics row.">&mdash;</b></div>
     <div class="dash-actions">
       <div class="dash-actions-col">
         <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
@@ -625,6 +626,8 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 
   <div id="stall-banner"><div class="sb-title" id="sb-title"></div><div class="sb-body" id="sb-body"></div></div>
+  <div class="health-grid" id="health-grid"></div>
+  <div id="alerts"></div>
   <div id="flow-diagram">
     <div class="flow-hd-row">
       <div class="flow-title">Event flow</div>
@@ -669,14 +672,6 @@ table.itbl tr:hover td{background:var(--surf2)}
       </div>
     </div>
   </div>
-  <div class="health-grid" id="health-grid"></div>
-  <div id="alerts"></div>
-
-  <div class="sec"><div class="sec-hd">Summary</div>
-    <p class="stat-legend">Subtitles state how each number is rolled up: <span class="sl-term">sum</span> = 30s counter deltas added across the window; <span class="sl-term">peak</span> = highest sample in the window; <span class="sl-term">mean</span> = average of samples per interval; <span class="sl-term">latest</span> = last interval only.</p>
-    <div class="stat-wrap" id="stat-wrap"></div>
-  </div>
-
   <div class="sec" id="sec-flow">
     <div class="sec-hd">Event flow by layer</div>
     <div class="cgrid">
@@ -684,7 +679,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="cc-head-row">
           <div class="cc-head-titles">
             <div class="cc-title">In-flight events per pipeline layer</div>
-            <div class="cc-sub">FB_ACTIVE (pre-pipeline input active, when reported) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; where events are jammed. Distinct from Table D &ldquo;dataset keys&rdquo; (codec / ingress processing time).</div>
+            <div class="cc-sub">FB_ACTIVE (pre-pipeline input active, when reported) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; where events are jammed. Compare with the <strong>Event flow</strong> section above. Distinct from Table D &ldquo;dataset keys&rdquo; (codec / ingress processing time).</div>
           </div>
           <div class="cc-layer-ctrl">
             <div class="cc-tip-wrap">
@@ -702,6 +697,11 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="chart-fixed-h"><canvas id="ch-layer" height="175"></canvas></div>
       </div>
     </div>
+  </div>
+
+  <div class="sec"><div class="sec-hd">Summary</div>
+    <p class="stat-legend">Subtitles state how each number is rolled up: <span class="sl-term">sum</span> = 30s counter deltas added across the window; <span class="sl-term">peak</span> = highest sample in the window; <span class="sl-term">mean</span> = average of samples per interval; <span class="sl-term">latest</span> = last interval only. <strong>Version</strong> is in the top metadata (identity), not a rolled-up performance metric.</p>
+    <div class="stat-wrap" id="stat-wrap"></div>
   </div>
 
   <div class="sec" id="sec-inp" style="display:none">
@@ -2673,6 +2673,8 @@ function showDashboard(){
     mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');
     const mc=document.getElementById('m-comp');
     if(mc)mc.textContent='\u2014';
+    const mv=document.getElementById('m-version');
+    if(mv){mv.textContent='\u2014';mv.setAttribute('title',String(STAT_TIPS['Version']||''));}
     syncComponentIdCopyUi('');
   }
 }
@@ -2701,6 +2703,18 @@ function renderComp(cid){
   document.getElementById('m-comp').textContent=cid;
   document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
   document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmtSpanSec(base.length*30)+')';
+  const mVer=document.getElementById('m-version');
+  if(mVer){
+    if(C.length){
+      const v=String((C[C.length-1]&&C[C.length-1].VERSION)||'--');
+      mVer.textContent=v;
+      const baseTip=String(STAT_TIPS['Version']||'');
+      mVer.setAttribute('title',v&&v!=='--'?baseTip+'\n\n'+v:baseTip);
+    }else{
+      mVer.textContent='\u2014';
+      mVer.setAttribute('title',String(STAT_TIPS['Version']||''));
+    }
+  }
   setHdrStatus(cid.length>22?cid.slice(0,22)+'\u2026':cid,{copyComponent:cid});
   syncComponentIdCopyUi(cid);
 
@@ -3081,7 +3095,6 @@ function renderComp(cid){
     mkStat('Go Heap',allocR.toFixed(0)+' MB swing','peak-to-peak: max(alloc) - min(alloc); GC sawtooth is normal','');
     mkStat('Uptime',fmt((Number(last.UPTIME_s)||0)/3600,1)+'h','latest gauge','ok');
     mkStat('Goroutines',String(last.GOROUTINES||'--'),'latest gauge','');
-    mkStat('Version',String(last.VERSION||'--'),'latest row','');
     // Filebeat-specific cards — only shown when field is present
     const harvRunVals = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
     if(harvRunVals.length > 0){
