@@ -257,7 +257,7 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .flow-state-legend{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
   font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--mid);
-  margin:0 0 6px;min-width:0
+  margin:0 0 10px;min-width:0
 }
 .flow-slg-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .flow-slg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
@@ -650,9 +650,9 @@ table.itbl tr:hover td{background:var(--surf2)}
       <p class="flow-viz-persist" id="flow-viz-persist" aria-hidden="true"></p>
       <div id="flow-viz-spark">
         <div class="flow-state-strip" id="flow-state-strip" style="display:none" role="img" aria-label=""></div>
+        <div class="flow-state-legend" id="flow-state-legend" style="display:none" aria-label="State strip key" aria-hidden="true"></div>
         <div class="flow-dominant-legend" id="flow-dominant-legend" aria-hidden="true"></div>
         <div class="flow-dominant-strip" id="flow-dominant-strip" style="display:none" role="img" aria-label=""></div>
-        <div class="flow-state-legend" id="flow-state-legend" style="display:none" aria-label="State strip key" aria-hidden="true"></div>
         <div class="chart-flow-spark-h"><canvas id="ch-flow-spark" height="120"></canvas></div>
       </div>
       <div id="flow-viz-passport"></div>
@@ -1901,7 +1901,7 @@ function updateFlowVizPanels(A, B, totAck, xRangeDashForTip, idleTailArg){
     sPersist.style.display='block';
     sPersist.setAttribute('aria-hidden','false');
     sPersist.innerHTML= v==='spark'
-    ?'<strong>State strip</strong> (top) = per-interval <em>health</em> (ACK step, stall heuristics, idle/EOF). <strong>Dominant strip + legend</strong> = which layer&rsquo;s in-flight <em>count</em> was largest (argmax; ties ingest &rarr; pipe &rarr; queue &rarr; out). <strong>Multiband</strong> below: the four series on the same 30&thinsp;s index.'
+    ?'Top: <strong>state strip</strong> and its <strong>key</strong> = per-interval <em>health</em> (ACK step, stall heuristics, idle/EOF). Then: <strong>dominant</strong> legend and strip = which layer&rsquo;s in-flight <em>count</em> was largest (argmax; ties ingest &rarr; pipe &rarr; queue &rarr; out). <strong>Multiband</strong> = the four series on the same 30&thinsp;s index.'
     :'Passport: each column &mdash; the band is min&ndash;max over the load window; the dot is the <strong>latest</strong> 30&thinsp;s row. <strong>Acked</strong> = sum of counter deltas in the full window, not a layer range.'+(xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'');
   }
   sSpark.classList.toggle('fv-on', v==='spark');
