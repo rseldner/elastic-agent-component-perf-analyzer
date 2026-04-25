@@ -1729,7 +1729,7 @@ function flowLinkAria(leg, cls, idleTailPattern, stallLayer){
   return'';
 }
 const FLOW_LAY_C=['#00c875','#00d4ff','#ffb830','#ff2d55'];// multiband line colors (ingest, pipe, queue, out)
-const STATE_H_COL={flowing:'#00c875',input:'#f5a623',pipeline:'#ffb830',deadlock:'#ff2d55',trickle:'#7fa8c9'};
+const STATE_H_COL={flowing:'#00c875',input:'#f5a623',pipeline:'#e55d2a',deadlock:'#ff2d55',trickle:'#7fa8c9',mixed:'#8b6cef'};
 const STATE_H_LEG=[['flowing','Flowing'],['deadlock','Deadlock'],['pipeline','Pipeline stall'],['input','Input stall'],['trickle','Low volume (batching)'],['mixed','Mixed (outliers)'],['idletail','Idle-tail (EOF)'],['idle','Idle']];
 const STATE_PRI={deadlock:6,pipeline:5,input:4,trickle:3,flowing:2,idletail:1,idle:0};
 const STALL_SET=new Set(['deadlock','pipeline','input']);
@@ -1800,7 +1800,7 @@ function flowVizUpdatePersistText(sPersist,xRangeDashForTip,sliceFirst,sliceLast
   if(!sPersist) return;
   sPersist.style.display='block';
   sPersist.setAttribute('aria-hidden','false');
-  let t='Per-interval <strong>health</strong> (state strip) uses ACK step and the same stall/idle heuristics as the banner. The <strong>multiband</strong> chart is the four in-flight series on the same 30&thinsp;s index.';
+  let t='The <strong>state strip</strong> is a <strong>classifier</strong> (same stall heuristics as the banner), <em>not</em> a raw &ldquo;how full is PIPE / Q&rdquo; meter. <strong>Flowing</strong> = <strong>ACKed \u0394 &gt; 0</strong> that row. <strong>Pipeline</strong> = no +ACK, <strong>PIPE>0, OUT=0</strong> (and not the low\u2011volume / tiny\u2011queue exception). <strong>Idle</strong> = not matched; gauges can still show in\u2011flight. The <strong>multiband</strong> = four in\u2011flight series on the same 30&thinsp;s index.';
   if(isZoomed&&fullN>0) t+=' <strong>Zoom:</strong> showing a subset; strip buckets use only visible intervals, so <em>Mixed (outliers)</em> is less common.';
   t+=xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'';
   if(isZoomed&&fullN>0) t+=' <span class="fvs" style="opacity:0.85">View: '+escHtml(xAxisRangeTitle(sliceFirst,sliceLast))+' ('+(_flowVizI0+1)+'\u2013'+(_flowVizI1+1)+' of '+fullN+')</span>';
@@ -2004,10 +2004,21 @@ function _stateHLabel(st){
   if(st==='idle') return'Idle';
   return st;
 }
+/** One-line explainer: matches classifyStateInterval() (ACK \u0394 and stall shapes, not a single gauge rule). Plain text for title= tooltips. */
+function _stateHWhy(worst){
+  if(worst==='flowing') return'Why: ACKed \u0394 > 0 in this 30s row \u2014 green is about progress, not the PIPE/OUT snapshot at export.';
+  if(worst==='pipeline') return'Why: no +ACK, PIPE>0, OUT=0, and not the \u201clow volume\u201d (near-empty, tiny counts) rule; the strip does not map \u201cqueue = pipeline\u201d from gauges alone.';
+  if(worst==='trickle') return'Why: no +ACK, tiny pipes/queues (queue <1%, very small FB/PIPE), or FB-driven batching; not a full pipeline-stall match.';
+  if(worst==='deadlock') return'Why: no +ACK, queue \u226580% full, OUT>0 (output path congested).';
+  if(worst==='input') return'Why: no +ACK, FB>0 (ingestion / buffer) \u2014 not the PIPE>0, OUT=0 pipeline-stall pattern.';
+  if(worst==='idletail') return'Why: idle/EOF pattern for the tail, same as banner.';
+  if(worst==='idle') return'Why: no +ACK and not any named class above. \u201cIdle\u201d is a fallback \u2014 OUT or PIPE in the row can still be >0 (in-flight, not a stall label).';
+  return'';
+}
 function _stateHLegSwatchHtml(st){
   if(st==='idle') return'<span class="flow-slg-sq flow-s-idle"></span>';
   if(st==='idletail') return'<span class="flow-slg-sq flow-s-idletail" style="display:inline-block;vertical-align:middle;opacity:0.92"></span>';
-  if(st==='mixed') return'<span class="flow-slg-sq flow-s-mixed" style="background-color:'+escAttr(STATE_H_COL['pipeline']||'#ffb830')+'"></span>';
+  if(st==='mixed') return'<span class="flow-slg-sq flow-s-mixed" style="background-color:'+escAttr(STATE_H_COL.mixed||'#8b6cef')+'"></span>';
   return'<span class="flow-slg-sq" style="background:'+escAttr(STATE_H_COL[st]||'#999')+'"></span>';
 }
 function _flowStateLegHtml(used){
@@ -2066,6 +2077,7 @@ function _buildStateStrip(m, A, B, idleT){
       const t1=String(m.ts[b1-1]||'').slice(11,19);
       const parts=STATE_H_LEG.map(p=>p[0]).filter(k=>counts[k]&&k!=='mixed').map(k=>counts[k]+'\u00d7 '+_stateHLabel(k));
       tip=t0+'\u2013'+t1+'  '+_stateHLabel(worst)+(isMixed?' \u26a0':'')+'\n'+(b1-b0)+' intervals: '+parts.join(', ');
+      { const w=_stateHWhy(worst); if(w) tip+='\n'+w; }
     } else {
       const abS=abRowAtIndex(A,B,bi);
       const aS=abS.a, bS=abS.b;
@@ -2077,12 +2089,20 @@ function _buildStateStrip(m, A, B, idleT){
       const qP=bS?Number(bS.Q_PCT)||0:0;
       const qShow=qP<=1?qP*100:qP;
       tip=t0+'  '+_stateHLabel(worst)+'. ACKed \u0394: '+ackD+'; FB: '+fmt(fbV,0)+'; PIPE: '+fmt(pipeV,0)+'; OUT: '+fmt(outV,0)+'; Q_PCT: '+fmt(qShow,1)+'%';
+      { const w=_stateHWhy(worst); if(w) tip+='\n'+w; }
     }
     let cls='flow-s-seg';
     let sty='';
     if(worst==='idle') cls+=' flow-s-idle';
     else if(worst==='idletail') cls+=' flow-s-idletail';
-    else sty='style="background:'+escAttr(STATE_H_COL[worst]||'#888')+'"';
+    else {
+      const col=isMixed
+        ? (STATE_H_COL.mixed||'#8b6cef')
+        : (STATE_H_COL[worst]||'#888');
+      // background-color (not `background` shorthand) so .flow-s-mixed striping can layer
+      const prop=isMixed?'background-color':'background';
+      sty='style="'+prop+':'+escAttr(col)+'"';
+    }
     if(isMixed) cls+=' flow-s-mixed';
     h.push('<div class="'+cls+'" data-idx="'+midIdx+'" data-b0="'+b0+'" data-b1="'+b1+'" '+(sty?sty+' ':'')+'title="'+escAttr(tip)+'"></div>');
   }
