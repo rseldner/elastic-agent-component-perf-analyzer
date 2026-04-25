@@ -38,9 +38,14 @@
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.6}
 code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px;color:var(--info)}
 header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--header-bg);backdrop-filter:blur(8px);z-index:100}
-.hdr-actions{display:flex;align-items:center;gap:12px}
-.hdr-status-wrap{display:inline-flex;align-items:center;gap:6px;max-width:min(100vw - 200px,520px)}
-.hdr-status-wrap #hdr-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr-actions{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+.hdr-comp-picker{width:min(48vw,420px);min-width:220px}
+.hdr-comp-picker .comp-sel-row{gap:6px}
+.hdr-comp-picker .comp-sel{padding:8px 34px 8px 10px;font-size:11px}
+.hdr-comp-lbl{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+  color:var(--dim);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap
+}
 .theme-toggle{
   font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
   padding:8px 12px;
@@ -65,7 +70,6 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .repo-link:hover{border-color:rgba(0,212,255,.35);color:var(--text);background:var(--reload-hover-bg)}
 [data-theme="light"] .repo-link:hover{border-color:rgba(0,124,170,.35)}
 .logo-text{display:flex;flex-direction:column}
-#hdr-status{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--bdr2);color:var(--dim)}
 #pg-upload{max-width:700px;margin:60px auto;padding:0 28px}
 .upload-h{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;margin-bottom:8px}
 .upload-sub{color:var(--mid);font-size:13px;line-height:1.9;margin-bottom:36px}
@@ -555,11 +559,17 @@ table.itbl tr:hover td{background:var(--surf2)}
     <a class="repo-link" href="https://github.com/rseldner/elastic-agent-component-perf-analyzer" target="_blank" rel="noopener noreferrer" aria-label="Open project repository on GitHub">GitHub Repo</a>
   </div>
   <div class="hdr-actions">
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme"></button>
-    <div class="hdr-status-wrap">
-      <span id="hdr-status">no data loaded</span>
-      <button type="button" class="id-copy-btn id-copy-btn--hdr" id="hdr-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button>
+    <div class="hdr-comp-picker" id="hdr-comp-picker" hidden>
+      <div class="comp-sel-row">
+        <span class="hdr-comp-lbl">Component:</span>
+        <div class="comp-sel-inner">
+          <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
+        </div>
+        <button type="button" class="id-copy-btn" id="comp-sel-copy" hidden disabled title="Copy selected component ID" aria-label="Copy selected component ID">&#128203;</button>
+      </div>
     </div>
+    <button type="button" class="reload-btn" id="hdr-reload" onclick="resetAll()" hidden>&#8617; reload</button>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme"></button>
   </div>
 </header>
 
@@ -595,15 +605,6 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="dash-meta">COMPONENT &nbsp;<span class="dash-comp-wrap"><b id="m-comp">&mdash;</b><button type="button" class="id-copy-btn id-copy-btn--inline" id="dash-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button></span><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
     <div class="dash-actions">
       <div class="dash-actions-col">
-        <div class="comp-sel-panel">
-          <label class="comp-sel-lbl" for="comp-sel">Component Details</label>
-          <div class="comp-sel-row">
-            <div class="comp-sel-inner">
-              <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
-            </div>
-            <button type="button" class="id-copy-btn" id="comp-sel-copy" hidden disabled title="Copy selected component ID" aria-label="Copy selected component ID">&#128203;</button>
-          </div>
-        </div>
         <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
           <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
             <span class="inp-cap-toggle-main">Dataset keys (selected component)</span>
@@ -619,7 +620,6 @@ table.itbl tr:hover td{background:var(--surf2)}
           </div>
         </div>
       </div>
-      <button class="reload-btn" onclick="resetAll()">&#8617; reload</button>
     </div>
   </div>
 
@@ -683,7 +683,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="cc-head-row">
           <div class="cc-head-titles">
             <div class="cc-title">In-flight events per pipeline layer</div>
-            <div class="cc-sub">FB_ACTIVE (ingestion buffer, pre-pipeline) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; where events are jammed. Distinct from Table D &ldquo;dataset keys&rdquo; (codec / ingress processing time).</div>
+            <div class="cc-sub">FB_ACTIVE (pre-pipeline input active, when reported) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; where events are jammed. Distinct from Table D &ldquo;dataset keys&rdquo; (codec / ingress processing time).</div>
           </div>
           <div class="cc-layer-ctrl">
             <div class="cc-tip-wrap">
@@ -761,8 +761,8 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="cgrid">
       <div class="cc"><div class="cc-title">Memory (MB)</div><div class="cc-sub">MEM_ALLOC_MB (Go heap, oscillates with GC) / RSS_MB (OS resident)</div><canvas id="ch-mem" height="175"></canvas></div>
       <div class="cc"><div class="cc-title">CPU time per interval</div><div class="cc-sub">TOTAL / USER / SYS &mdash; 30&nbsp;s deltas (ms in data; axis &amp; tooltips auto-scale)</div><canvas id="ch-cpu" height="175"></canvas></div>
-      <div class="cc" id="cc-harv" style="display:none"><div class="cc-title">Harvester &amp; file handles</div><div class="cc-sub">HARV_RUNNING (active harvesters) &middot; HARV_FILES (open file handles). Zero harvesters = file reading stopped.</div><canvas id="ch-harv" height="175"></canvas></div>
-      <div class="cc" id="cc-fd" style="display:none"><div class="cc-title">File descriptor usage</div><div class="cc-sub">FD_OPEN vs FD_LIMIT (soft ulimit). &gt;90% full = silent failures opening new files.</div><canvas id="ch-fd" height="175"></canvas></div>
+      <div class="cc" id="cc-harv" style="display:none"><div class="cc-title">Harvester &amp; file handles</div><div class="cc-sub">HARV_RUNNING (active harvesters, when reported) &middot; HARV_FILES (open file handles, when reported). Zero harvesters can mean file reading stopped.</div><canvas id="ch-harv" height="175"></canvas></div>
+      <div class="cc" id="cc-fd" style="display:none"><div class="cc-title">File descriptor usage</div><div class="cc-sub">FD_OPEN vs FD_LIMIT (soft ulimit). &gt;90% full = risk opening new resources (files/sockets) fails.</div><canvas id="ch-fd" height="175"></canvas></div>
     </div>
   </div>
 </div>
@@ -798,6 +798,12 @@ function ndjsonBasenameOk(name){
 
 function num(v){const n=Number(v);return isFinite(n)?n:0;}
 function rnd(v){return Math.round(num(v));}
+function hasNumericMetric(rows,key){
+  return(rows||[]).some(r=>{
+    const v=r&&r[key];
+    return v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v));
+  });
+}
 
 function clearLoadedData(){
   ['A','B','C','D','E'].forEach(key=>{
@@ -846,12 +852,13 @@ function buildRowA(ts,cid,m){
   const ev=out.events||{};
   const lat=(out.write&&out.write.latency&&out.write.latency.histogram)||{};
   const fbEv=(m.filebeat&&m.filebeat.events)||{};
+  const hasFbActive=Object.prototype.hasOwnProperty.call(fbEv,'active');
   const wr=out.write||{};
   const rd=out.read||{};
   return{
     TIMESTAMP:ts,COMPONENT_ID:cid,
     ACKED:num(ev.acked),FAILED:num(ev.failed),'429s':num(ev.toomany),DROPPED:num(ev.dropped),DUPES:num(ev.duplicates),
-    FB_ACTIVE:num(fbEv.active),
+    FB_ACTIVE:hasFbActive?num(fbEv.active):'',
     OUT_ACTIVE:num(ev.active),BATCHES:num(ev.batches),WRITE_B:num(wr.bytes),READ_B:num(rd.bytes),
     LAT_MEAN:num(lat.mean),LAT_MED:num(lat.median),LAT_P95:num(lat.p95),LAT_P99:num(lat.p99),LAT_P999:num(lat.p999),LAT_MAX:num(lat.max),
     WRITE_ERR:num(wr.errors),READ_ERR:num(rd.errors)
@@ -888,6 +895,10 @@ function buildRowC(ts,cid,m){
   const reg=fb.registrar||{};
   const st=reg.states||{};
   const hdl=b.handles||{};
+  const hasHarvRunning=Object.prototype.hasOwnProperty.call(hv,'running');
+  const hasHarvFiles=Object.prototype.hasOwnProperty.call(hv,'open_files');
+  const hasFdOpen=Object.prototype.hasOwnProperty.call(hdl,'open');
+  const hasFdLimit=Object.prototype.hasOwnProperty.call(hdl,'limit');
   const regVal=num(st.current);
   return{
     TIMESTAMP:ts,COMPONENT_ID:cid,
@@ -896,8 +907,11 @@ function buildRowC(ts,cid,m){
     CPU_TOTAL_ms:num(tot.time&&tot.time.ms),CPU_USER_ms:num(usr.time&&usr.time.ms),CPU_SYS_ms:num(sys.time&&sys.time.ms),
     MEM_ALLOC_MB:rnd(num(ms.memory_alloc)/1048576),RSS_MB:rnd(num(ms.rss)/1048576),
     GOROUTINES:num(b.runtime&&b.runtime.goroutines),
-    HARV_RUNNING:num(hv.running),HARV_FILES:num(hv.open_files),
-    FD_OPEN:num(hdl.open),FD_LIMIT:num(hdl.limit),REGISTRAR:regVal>0?regVal:''
+    HARV_RUNNING:hasHarvRunning?num(hv.running):'',
+    HARV_FILES:hasHarvFiles?num(hv.open_files):'',
+    FD_OPEN:hasFdOpen?num(hdl.open):'',
+    FD_LIMIT:hasFdLimit?num(hdl.limit):'',
+    REGISTRAR:regVal>0?regVal:''
   };
 }
 
@@ -1321,6 +1335,25 @@ function xAxisRangeTitle(tsFirst,tsLast){
   return A.slice(0,16).replace('T',' ')+'\u2009\u2192\u2009'+Z.slice(0,16).replace('T',' ')+' UTC';
 }
 function fmt(n,dp=0){if(n==null||isNaN(n))return'--';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return Number(n).toFixed(dp);}
+/** One-unit span for load windows (ms, s, min, h, d by magnitude). Does not use fmt() K-suffixes on large minute counts. */
+function fmtSpanSec(sec){
+  if(sec==null||isNaN(sec))return'\u2014';
+  if(sec<0)return'\u2014';
+  if(sec===0)return'0 s';
+  if(sec<1)return Math.round(sec*1000)+' ms';
+  if(sec<60){
+    const t=(sec>=10?String(Math.round(sec)):sec.toFixed(1)).replace(/\.0+$/,'').replace(/(\.\d)0$/,'$1');
+    return t+' s';
+  }
+  if(sec<3600){
+    const m=sec/60;
+    if(m<10)return m.toFixed(1).replace(/\.0+$/,'').replace(/(\.\d)0$/,'$1')+' min';
+    return Math.round(m)+' min';
+  }
+  if(sec<86400)return(sec/3600).toFixed(1).replace(/\.0$/,'')+' h';
+  const d=sec/86400;
+  return(d>=10?d.toFixed(0):d.toFixed(1).replace(/\.0$/,''))+' d';
+}
 function fmtMs(ms){if(ms==null||isNaN(ms)||ms<=0)return'--';if(ms<1000)return Math.round(ms)+'ms';const s=ms/1000;return (s>=100?s.toFixed(0):s>=10?s.toFixed(1):s.toFixed(2)).replace(/\.0+$/,'').replace(/(\.\d)0$/,'$1')+'s';}
 /** Human-readable duration from a millisecond count (tables, tooltips). */
 function fmtDurationMs(ms){
@@ -1473,8 +1506,9 @@ function backlogWindowSeries(vals){
  * Per-layer full-window stats (events) for the four backlog gauges. null for a key if that table is missing.
  */
 function perSeriesBacklogStats(A,B){
+  const hasFbActive=hasNumericMetric(A,'FB_ACTIVE');
   return{
-    fb:A&&A.length?backlogWindowSeries(A.map(r=>Number(r.FB_ACTIVE)||0)):null,
+    fb:A&&A.length&&hasFbActive?backlogWindowSeries(A.map(r=>Number(r.FB_ACTIVE)||0)):null,
     out:A&&A.length?backlogWindowSeries(A.map(r=>Number(r.OUT_ACTIVE)||0)):null,
     pipe:B&&B.length?backlogWindowSeries(B.map(r=>Number(r.PIPE_ACTIVE)||0)):null,
     q:B&&B.length?backlogWindowSeries(B.map(r=>Number(r.Q_FILLED)||0)):null
@@ -1583,7 +1617,7 @@ function syncLayerChartYSeg(){
 /** Rich help for the in-flight layer chart (injected into #cc-layer-tip). */
 function layerChartHelpHtml(){
   return'<div class="lht">What you are looking at</div>'+
-  'Each line is a <strong>gauge snapshot every '+STALL_PERSIST.sampleS+'s</strong>: how many events are <em>currently</em> held in the filebeat <strong>ingestion</strong> buffer (FB_ACTIVE), in the beat pipeline (PIPE_ACTIVE), or in-flight to the output worker (OUT_ACTIVE). They are <strong>parallel stages</strong>, not three slices of one additive total &mdash; the same event is not counted on all three lines at once.'+
+  'Each line is a <strong>gauge snapshot every '+STALL_PERSIST.sampleS+'s</strong>: how many events are <em>currently</em> held pre-pipeline (FB_ACTIVE, when reported), in the beat pipeline (PIPE_ACTIVE), or in-flight to the output worker (OUT_ACTIVE). They are <strong>parallel stages</strong>, not three slices of one additive total &mdash; the same event is not counted on all three lines at once.'+
   '<div class="lht">How we infer where a stall is</div>'+
   '<ul>'+
   '<li><strong>Cross-read the lines</strong> at the same time index: whichever layer stays high while throughput (ACKED) is flat at zero usually owns the bottleneck.</li>'+
@@ -1601,8 +1635,9 @@ function layerChartHelpHtml(){
   '<strong>Overlaid</strong> (default) shows each gauge at its true scale &mdash; best for exact backlog per layer. <strong>Stacked</strong> adds the three values at each timestamp so you can see <em>which layer dominates</em> the vertical space and how combined pressure evolves; the stacked total is <strong>not</strong> a physical &ldquo;events in one pipe&rdquo; count. Prefer overlaid when comparing absolute levels.';
 }
 /** Roll-up values for the Event flow strip (queue from B, input/output in-flight from A). */
-function pickFlowRollup(A,B,mode){
-  const z={fbAct:0,outAct:0,pipeAct:0,qFill:0,qMax:3200,qPct:0};
+function pickFlowRollup(A,B,mode,opts){
+  const hasFbActive=!(opts&&opts.hasFbActive===false);
+  const z={fbAct:0,outAct:0,pipeAct:0,qFill:0,qMax:3200,qPct:0,hasFbActive};
   if(!A.length&&!B.length)return z;
   const lastA=A.length?A[A.length-1]:{};
   const lastB=B.length?B[B.length-1]:{};
@@ -1612,16 +1647,17 @@ function pickFlowRollup(A,B,mode){
     if(mode==='worst')return maxKey(rows,k);
     return avgKey(rows,k);
   }
-  const fbAct=A.length?pick(A,'FB_ACTIVE'):0;
+  const fbAct=hasFbActive&&A.length?pick(A,'FB_ACTIVE'):0;
   const outAct=A.length?pick(A,'OUT_ACTIVE'):0;
   const pipeAct=B.length?pick(B,'PIPE_ACTIVE'):0;
   const qFill=B.length?pick(B,'Q_FILLED'):0;
   let qMax=B.length?pick(B,'Q_MAX'):0;
   if(!qMax)qMax=Number(lastB.Q_MAX)||3200;
   const qPct=B.length?pick(B,'Q_PCT'):0;
-  return{fbAct,outAct,pipeAct,qFill,qMax,qPct};
+  return{fbAct,outAct,pipeAct,qFill,qMax,qPct,hasFbActive};
 }
-function flowMetricSub(mode,metric){
+function flowMetricSub(mode,metric,hasFbActive){
+  if(metric==='fb'&&!hasFbActive)return'not reported';
   if(mode==='latest'){
     if(metric==='fb')return'FB_ACTIVE';
     if(metric==='q')return'% full';
@@ -1896,11 +1932,12 @@ function classifyStateInterval(i, aRow, bRow, prevARow, idleTail){
  * Aligns A and B to the same 30s rows by index (same as Event flow by layer), per component.
  */
 function mergeLayerSeries(A,B){
+  const hasFbActive=hasNumericMetric(A,'FB_ACTIVE');
   if(!A.length&&!B.length)return{ts:[],fb:[],pipe:[],q:[],out:[]};
   if(A.length&&!B.length){
     return{
       ts:A.map(r=>r.TIMESTAMP),
-      fb:A.map(r=>Number(r.FB_ACTIVE)||0),
+      fb:hasFbActive?A.map(r=>Number(r.FB_ACTIVE)||0):[],
       pipe:new Array(A.length).fill(0),
       q:new Array(A.length).fill(0),
       out:A.map(r=>Number(r.OUT_ACTIVE)||0)
@@ -1909,7 +1946,7 @@ function mergeLayerSeries(A,B){
   if(!A.length&&B.length){
     return{
       ts:B.map(r=>r.TIMESTAMP),
-      fb:new Array(B.length).fill(0),
+      fb:[],
       pipe:B.map(r=>Number(r.PIPE_ACTIVE)||0),
       q:B.map(r=>Number(r.Q_FILLED)||0),
       out:new Array(B.length).fill(0)
@@ -1919,7 +1956,7 @@ function mergeLayerSeries(A,B){
   const ts=[],fb=[],pipe=[],q=[],out=[];
   for(let i=0;i<n;i++){
     ts.push(A[i]&&A[i].TIMESTAMP?A[i].TIMESTAMP:B[i].TIMESTAMP);
-    fb.push(A[i]?Number(A[i].FB_ACTIVE)||0:0);
+    if(hasFbActive)fb.push(A[i]?Number(A[i].FB_ACTIVE)||0:0);
     out.push(A[i]?Number(A[i].OUT_ACTIVE)||0:0);
     pipe.push(B[i]?Number(B[i].PIPE_ACTIVE)||0:0);
     q.push(B[i]?Number(B[i].Q_FILLED)||0:0);
@@ -2235,11 +2272,11 @@ const STAT_TIPS = {
   'RSS':           'Resident Set Size &mdash; OS physical memory. Card shows the latest sample; subtitle gives change from first to last row in the window. Sustained growth (&gt;50MB) may indicate a memory leak.',
   'Go Heap':       'max(MEM_ALLOC_MB) &minus; min(MEM_ALLOC_MB) in the window (heap swing from GC). Oscillation is normal; monotonic growth without release = potential leak.',
   'Uptime':        'Beat process uptime from the latest row. Monotonically increasing = no restarts. A mid-window drop to near-zero means the process was restarted.',
-  'Goroutines':    'Active Go goroutines from the latest row. Stable 70&ndash;80 is healthy for filebeat. Rapid unbounded growth = goroutine leak or deadlocked workers.',
+  'Goroutines':    'Active Go goroutines from the latest row. Stable ranges vary by beat/integration; rapid unbounded growth is a leak/deadlock smell.',
   'Version':       'Beat version string from the latest metrics row.',
-  'Harvesters':    'HARV_RUNNING from the latest row. Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
-  'Harvester FDs': 'HARV_FILES from the latest row. High value + stalled events = files held open but not producing (rotation or permission issue).',
-  'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk of silent failures when opening new files, log rotation, or new file inputs.',
+  'Harvesters':    'HARV_RUNNING from the latest row (when reported). Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
+  'Harvester FDs': 'HARV_FILES from the latest row (when reported). High value + stalled events = files held open but not producing (rotation/permission issue).',
+  'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk opening new process resources (files/sockets/endpoints) fails; impact depends on component type.',
   'Registrar':     'Maximum REGISTRAR value seen in the window. &gt;100k tracked file states causes slow startup and memory pressure.',
   'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (ES rejected the event). Nonzero = network/TLS issue.',
   'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = ES sent a response the beat could not interpret.',
@@ -2341,12 +2378,14 @@ function sumStepDelta(rows,key){
 
 // Refines diagnoseLayer 'input' when there are no acks/fails for the window (same inputs as stall banner).
 function refineInputStall(A,B,C){
-  const maxFb=A.length?maxKey(A,'FB_ACTIVE'):0;
+  const fbVals=A.map(r=>r.FB_ACTIVE).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v))).map(Number);
+  const hasFbActive=fbVals.length>0;
+  const maxFb=hasFbActive?Math.max(...fbVals):0;
   const pubD=B.length>=2?sumStepDelta(B,'PUBLISHED'):null;
   const lastCli=B.length?Number(B[B.length-1].CLIENTS)||0:null;
   const harv=C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v))).map(Number);
 
-  if(maxFb>0)
+  if(hasFbActive&&maxFb>0)
     return{kind:'input_buffer',maxFb,pubD,lastCli,harvN:harv.length};
 
   if(harv.length===0)
@@ -2508,6 +2547,10 @@ function resetAll(){
   Object.keys(CHARTS).forEach(k=>delete CHARTS[k]);
   document.getElementById('pg-dash').style.display='none';
   document.getElementById('pg-upload').style.display='block';
+  const hcp=document.getElementById('hdr-comp-picker');
+  if(hcp)hcp.hidden=true;
+  const hrr=document.getElementById('hdr-reload');
+  if(hrr)hrr.hidden=true;
   const cr=document.getElementById('inp-cap-root');
   if(cr){cr.style.display='none';cr.setAttribute('aria-hidden','true');}
   collapseInputCapturePanel();
@@ -2542,9 +2585,13 @@ function resetAll(){
 function showDashboard(){
   document.getElementById('pg-upload').style.display='none';
   document.getElementById('pg-dash').style.display='block';
+  const hcp=document.getElementById('hdr-comp-picker');
+  const hrr=document.getElementById('hdr-reload');
   const cs=new Set();
   Object.values(DATA).forEach(rows=>{if(rows)rows.forEach(r=>{if(r.COMPONENT_ID)cs.add(r.COMPONENT_ID);});});
   const comps=[...cs].sort((a,b)=>String(a).localeCompare(String(b)));
+  if(hcp)hcp.hidden=comps.length===0;
+  if(hrr)hrr.hidden=false;
   const sel=document.getElementById('comp-sel');
   sel.innerHTML='';
   comps.forEach(cid=>{
@@ -2591,7 +2638,7 @@ function renderComp(cid){
 
   document.getElementById('m-comp').textContent=cid;
   document.getElementById('m-win').textContent=String(tsFirst).slice(0,16)+' \u2192 '+String(tsLast).slice(0,16)+' UTC';
-  document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmt(base.length*30/60,0)+' min)';
+  document.getElementById('m-int').textContent=base.length+' \xd730s  ('+fmtSpanSec(base.length*30)+')';
   setHdrStatus(cid.length>22?cid.slice(0,22)+'\u2026':cid,{copyComponent:cid});
   syncComponentIdCopyUi(cid);
 
@@ -2615,7 +2662,8 @@ function renderComp(cid){
 
   const flowMode=getFlowMode();
   syncFlowModeSeg();
-  const fr=pickFlowRollup(A,B,flowMode);
+  const hasFbActive=hasNumericMetric(A,'FB_ACTIVE');
+  const fr=pickFlowRollup(A,B,flowMode,{hasFbActive});
   const fbAct=fr.fbAct,outAct=fr.outAct,pipeAct=fr.pipeAct,qFill=fr.qFill,qMax=fr.qMax,qPct=fr.qPct;
   const backlogCv=perSeriesBacklogStats(A,B);
   const flowNumDp=flowMode==='mean'?1:0;
@@ -2632,40 +2680,41 @@ function renderComp(cid){
     }else{
       banner.style.display='block';
       const beatH=C.length?fmt((Number(C[0].UPTIME_s)||0)/3600,1):'?';
-      const winMin=fmt(A.length*30/60,0);
+      const winSpan=fmtSpanSec(A.length*30);
       if(idleTailPattern){
       banner.classList.add('mode-idle');sbTitle.className='sb-title mode-idle';
-      sbTitle.innerHTML='&#9201; ZERO OUTPUT THROUGHPUT \u2014 likely idle source (harvesters still tailing)';
+      sbTitle.innerHTML='&#9201; ZERO OUTPUT THROUGHPUT \u2014 likely idle source (input readers still tailing)';
       const conf=inputRefine.confidence==='high'?'High confidence: ':inputRefine.confidence==='medium'?'Medium confidence: ':'Low confidence (few harvester samples or missing PUBLISHED deltas): ';
       const pubLine=inputRefine.pubD===null
         ?'Table B had too few rows to sum PUBLISHED deltas; harvesters are up and pipeline.clients&gt;0.'
         :'pipeline.events.published did not increase across table B, ';
-      sbBody.innerHTML=conf+'HARV_RUNNING\u2248'+fmt(inputRefine.harvLast||0,0)+', '+pubLine+' FB_ACTIVE=0 across ~'+winMin+' min.<br>'+
+      const fbCtx=hasFbActive?'FB_ACTIVE=0':'pre-pipeline input active metric unavailable';
+      sbBody.innerHTML=conf+'HARV_RUNNING\u2248'+fmt(inputRefine.harvLast||0,0)+', '+pubLine+' '+fbCtx+' across ~'+winSpan+'.<br>'+
         'Tailers are open at EOF waiting for new lines; this is often normal when the log writer is quiet. If you expected traffic, verify the correct paths and that the application is logging.<br>'+
         'Beat uptime: '+beatH+'h.'+
         '<div class="sb-persist"><span class="pt-tag pt-moderate">Full window</span>Idle / EOF interpretation uses the whole capture (harvesters + publish deltas), not a single '+STALL_PERSIST.sampleS+'\u00a0s row.</div>';
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='input_buffer'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
-      sbTitle.innerHTML='&#128308; INPUT BUFFER BACKLOG \u2014 events held in filebeat, not reaching pipeline';
-      sbBody.innerHTML='FB_ACTIVE peaked at '+fmt(inputRefine.maxFb||0,0)+' across ~'+winMin+' min with no acks/fails. Harvesters may still be reading; check processors, pipeline blocking, or input-to-pipeline wiring.<br>'+
+      sbTitle.innerHTML='&#128308; INPUT BUFFER BACKLOG \u2014 events held before pipeline, not reaching pipeline';
+      sbBody.innerHTML='FB_ACTIVE peaked at '+fmt(inputRefine.maxFb||0,0)+' across ~'+winSpan+' with no acks/fails. Harvesters may still be reading; check processors, pipeline blocking, or input-to-pipeline wiring.<br>'+
         'Beat uptime: '+beatH+'h.'+persistSb;
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='harvester_stopped'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT STALL \u2014 harvesters mostly not running';
-      sbBody.innerHTML='HARV_RUNNING was 0 in ~'+Math.round((inputRefine.zeroFrac||0)*100)+'% of samples; no events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+
-        'Nothing is being tailed. Causes: no matching paths, permissions, rotation gap, FD limits, or misconfiguration. Check HARV_FILES and filebeat logs around '+String(tsFirst).slice(11,16)+' UTC.'+persistSb;
+      sbBody.innerHTML='HARV_RUNNING was 0 in ~'+Math.round((inputRefine.zeroFrac||0)*100)+'% of samples; no events acked or failed across ~'+winSpan+'. Beat uptime: '+beatH+'h.<br>'+
+        'Nothing is being tailed. Causes: no matching paths, permissions, rotation gap, FD limits, or misconfiguration. Check HARV_FILES and input logs around '+String(tsFirst).slice(11,16)+' UTC.'+persistSb;
     }else if(stallLayer==='input'&&inputRefine&&inputRefine.kind==='no_pipeline_clients_tail'){
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 pipeline.clients=0';
-      sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min; pipeline.clients stayed 0 while throughput was silent. Inputs may not be wired to the publisher, or the beat is still starting.<br>'+
-        'Beat uptime: '+beatH+'h. Check agent policy and filebeat input logs.'+persistSb;
+      sbBody.innerHTML='0 events acked or failed across ~'+winSpan+'; pipeline.clients stayed 0 while throughput was silent. Inputs may not be wired to the publisher, or the beat is still starting.<br>'+
+        'Beat uptime: '+beatH+'h. Check agent policy and input logs.'+persistSb;
     }else{
       banner.classList.add('mode-input');sbTitle.className='sb-title mode-input';
       sbTitle.innerHTML='&#128308; INPUT\u2192PIPELINE STALL \u2014 beat alive but no events entering pipeline';
-      sbBody.innerHTML='0 events acked or failed across ~'+winMin+' min. Beat uptime: '+beatH+'h.<br>'+(B.length&&Number(lastB.CLIENTS||0)===0?'pipeline.clients=0 \u2014 inputs never opened a pipeline connection. ':'')+
+      sbBody.innerHTML='0 events acked or failed across ~'+winSpan+'. Beat uptime: '+beatH+'h.<br>'+(B.length&&Number(lastB.CLIENTS||0)===0?'pipeline.clients=0 \u2014 inputs never opened a pipeline connection. ':'')+
         (C.length&&!idleTailPattern&&!C.some(r=>r.HARV_RUNNING!==''&&r.HARV_RUNNING!==undefined&&r.HARV_RUNNING!==null&&!isNaN(Number(r.HARV_RUNNING)))?
-          'This export has no filebeat harvester columns in table C; re-run perf extraction with an updated script to distinguish idle tail vs stopped harvesters. ':'')+
-        'Check filebeat input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked harvesters.'+persistSb;
+          'This export has no harvester columns in table C; re-run perf extraction with an updated script to distinguish idle tail vs stopped harvesters. ':'')+
+        'Check input-level logs around '+String(tsFirst).slice(11,16)+' UTC for errors or blocked readers.'+persistSb;
     }
     }
   }else banner.style.display='none';
@@ -2686,7 +2735,7 @@ function renderComp(cid){
     }
     const row=document.getElementById('flow-row');
     function fv(n,t1,t2){const disp=flowNumDp?fmt(n,1):fmt(n);if(n===0)return{v:disp,c:'dim'};if(n>=t2)return{v:disp,c:'crit'};if(n>=t1)return{v:disp,c:'warn'};return{v:disp,c:'ok'};}
-    const fbV=fv(fbAct,1000,5000);
+    const fbV=hasFbActive?fv(fbAct,1000,5000):{v:'n/a',c:'dim'};
     const qFillStr=flowNumDp?fmt(qFill,1):fmt(qFill);
     const qMaxStr=flowNumDp?fmt(qMax,1):fmt(qMax);
     const qV={v:qFillStr+(qMax?'/'+qMaxStr:''),c:qPct>=1?'crit':qPct>=0.8?'warn':qPct>0?'ok':'dim'};
@@ -2703,9 +2752,11 @@ function renderComp(cid){
     const ar1=escAttr(flowLinkAria(1,a1Cls,!!idleTailPattern,stallLayer));
     const ar2=escAttr(flowLinkAria(2,a2Cls,!!idleTailPattern,stallLayer));
     const ar3=escAttr(flowLinkAria(3,a3Cls,!!idleTailPattern,stallLayer));
-    const subfb=flowMetricSub(flowMode,'fb');
+    const subfb=flowMetricSub(flowMode,'fb',hasFbActive);
     const subo=flowMetricSub(flowMode,'out');
-    const ti=escAttr('Ingestion buffer, FB_ACTIVE ('+subfb+'). Box = gauge size vs fixed warn/crit bands; not the same meaning as link (stall) colors below.');
+    const ti=escAttr(hasFbActive
+      ?'Pre-pipeline input active, FB_ACTIVE ('+subfb+'). Box = gauge size vs fixed warn/crit bands; not the same meaning as link (stall) colors below.'
+      :'Pre-pipeline input active (FB_ACTIVE) is not reported for this component in this capture.');
     const tq=escAttr('Queue: Q_FILLED, '+qSub+'. Box = how full; does not by itself set link color (stall signature is separate).');
     const to=escAttr('Out inflight, OUT_ACTIVE ('+subo+'). Box = gauge size vs fixed bands; not the same meaning as link (stall) colors below.');
     const ta=escAttr('Acked: sum of counter deltas over this load window. Green = throughput, red = none in window (or idle/EOF if banner says so).');
@@ -2757,8 +2808,8 @@ function renderComp(cid){
     // Deadlock: stall banner doesn't cover this mode, so keep the alert
     if(isStalled&&stallLayer==='deadlock'){
       const ephem=stallTier==='transient';
-      const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
-      const body='OUT_ACTIVE='+fmt(outLatest)+' with ACKED=0 across ~'+winM+' min. '+
+      const winM=fmtSpanSec(A.length*STALL_PERSIST.sampleS);
+      const body='OUT_ACTIVE='+fmt(outLatest)+' with ACKED=0 across ~'+winM+'. '+
         (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
         'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
         '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.';
@@ -2767,8 +2818,8 @@ function renderComp(cid){
     }
     if(isStalled&&stallLayer==='pipeline'){
       const ephem=stallTier==='transient';
-      const winM=fmt(A.length*STALL_PERSIST.sampleS/60,0);
-      const body='PIPE_ACTIVE='+fmt(pipeLatest)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+' min. '+
+      const winM=fmtSpanSec(A.length*STALL_PERSIST.sampleS);
+      const body='PIPE_ACTIVE='+fmt(pipeLatest)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+'. '+
         (ephem?'Per-interval pipeline\u2192output stall signature was brief; re-capture if you need proof of a chronic drain issue. ':'')+
         'Events are queued in the pipeline but the output worker is not taking them. Check output config, connectivity to ES/Logstash, and output worker health in beat logs.';
       if(ephem)warnAlerts.push(['warn','Pipeline\u2192output stall (episodic signature)',body]);
@@ -2872,11 +2923,11 @@ function renderComp(cid){
       infoAlerts.push(['info','Beat process healthy \u2014 no crashes or restarts detected',
         'Uptime incremented continuously '+fmt(uptF/3600,1)+'h \u2192 '+fmt(uptL/3600,1)+'h. '+
         'Goroutines stable '+Math.min(...goro)+'\u2013'+Math.max(...goro)+'. '+
-        'Use the stall banner classification (harvesters, FB_ACTIVE, pipeline.clients) to separate idle tail from misconfiguration.']);
+        'Use the stall banner classification (HARV_RUNNING when reported, FB_ACTIVE when reported, pipeline.clients) to separate idle tails from misconfiguration.']);
     }
   }
 
-  // ── HARVESTER, FD, REGISTRAR (filebeat-specific) ────
+  // ── HARVESTER, FD, REGISTRAR (availability depends on component metrics) ────
   if(C.length){
     const harvRun = C.map(r=>r.HARV_RUNNING).filter(v=>v!==''&&v!==undefined&&v!==null&&!isNaN(Number(v)));
     const skipHarvStoppedBanner=isStalled&&stallLayer==='input'&&inputRefine&&inputRefine.kind==='harvester_stopped';
@@ -2884,7 +2935,7 @@ function renderComp(cid){
       const zeroHarv = harvRun.filter(v=>Number(v)===0).length;
       if(!skipHarvStoppedBanner&&zeroHarv > harvRun.length * 0.5)
         critAlerts.push(['error','Harvesters stopped — '+Math.round(zeroHarv/harvRun.length*100)+'% of intervals show 0 active harvesters',
-          'HARV_RUNNING=0 means filebeat has stopped reading all files. '+
+          'HARV_RUNNING=0 means file readers have stopped ingesting from files. '+
           'Causes: file permission change, all files rotated away, inode exhaustion, or misconfiguration. '+
           'Check HARV_FILES to see if handles are still held open (file held but not read = rotation issue).']);
       else if(zeroHarv > 0)
@@ -2896,8 +2947,8 @@ function renderComp(cid){
       const maxPct = Math.max(...fdOpen.map((v,i)=> fdLimit[i]>0 ? v/fdLimit[i] : 0));
       if(maxPct > 0.9)
         critAlerts.push(['error','File descriptor exhaustion — '+Math.round(maxPct*100)+'% of soft limit used',
-          'FD_OPEN is within 10% of FD_LIMIT. When exhausted the beat silently fails to open new files, stalling harvesters with no error message. '+
-          'Fix: increase ulimit -n or reduce the number of open file inputs. Max observed: FD_OPEN='+Math.max(...fdOpen)+', FD_LIMIT='+fdLimit[fdLimit.length-1]+'.']);
+          'FD_OPEN is within 10% of FD_LIMIT. When exhausted the process may fail to open additional resources (files, sockets, endpoints), causing silent backpressure/stalls. '+
+          'Fix: increase ulimit -n or reduce concurrent open resources. Max observed: FD_OPEN='+Math.max(...fdOpen)+', FD_LIMIT='+fdLimit[fdLimit.length-1]+'.']);
       else if(maxPct > 0.75)
         warnAlerts.push(['warn','File descriptors at '+Math.round(maxPct*100)+'% of soft limit','FD_OPEN/FD_LIMIT ratio approaching warning threshold. Monitor for growth.']);
     }
@@ -3037,7 +3088,9 @@ function renderComp(cid){
     if(layerCaveat){
       layerCaveat.classList.toggle('on',layerStacked);
       layerCaveat.textContent=layerStacked
-        ?'Stacked Y-axis: values at each time are summed (FB + pipeline + output). That sum is a visual composite for comparing which layers spike together; it is not a single real-world queue depth. Use Overlaid for literal per-layer counts.'
+        ?(hasFbActive
+          ?'Stacked Y-axis: values at each time are summed (FB + pipeline + output). That sum is a visual composite for comparing which layers spike together; it is not a single real-world queue depth. Use Overlaid for literal per-layer counts.'
+          :'Stacked Y-axis: values at each time are summed (pipeline + output). That sum is a visual composite for comparing which layers spike together; it is not a single real-world queue depth. Use Overlaid for literal per-layer counts.')
         :'';
     }
     const layerSrc=A.length?A:B;
@@ -3047,7 +3100,7 @@ function renderComp(cid){
     const layerXOpts={xTimestamps:layerTs,xRangeTitle:layerRange,xAxisTickCount:18};
     const ds=[];
     if(A.length)
-      ds.push({label:'FB_ACTIVE (ingestion buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.12)',fill:true});
+      if(hasFbActive)ds.push({label:'FB_ACTIVE (pre-pipeline input active)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.12)',fill:true});
     if(B.length)
       ds.push({
         label:'PIPE_ACTIVE (pipeline)',

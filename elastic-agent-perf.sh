@@ -21,18 +21,18 @@
 # Outputs to:  <log-dir>/perf-analysis-YYYYMMDD-HHMMSS/
 #   A-output-health.tsv     — libbeat output counters + write latency
 #   B-pipeline-queue.tsv    — pipeline event flow + queue depth
-#   C-beat-resources.tsv    — CPU, memory, goroutines, filebeat harvester gauges (when present)
+#   C-beat-resources.tsv    — CPU, memory, goroutines, optional harvester + handle gauges
 #   D-input-processing.tsv  — per-dataset-key codec/ingress processing time (monitoring.dataset; histogram.count>0 only)
 #   E-health-ratios.tsv     — derived success/error/saturation ratios
 #
 # Field notes:
 #   Counters (ACKED, FAILED, etc.)  — 30s deltas, pre-computed by monitoring layer
 #   Histograms (LAT_*, Q_PCT etc.)  — lifetime reservoir gauges, NOT deltas
-#   FB_ACTIVE                       — events in filebeat input buffer (pre-pipeline)
+#   FB_ACTIVE                       — pre-pipeline input active events (filebeat.events.active when present)
 #   OUT_ACTIVE                      — events in-flight to output worker (post-queue)
 #
 # Failure mode signatures:
-#   Input stall:            FB_ACTIVE≥0, PIPE_ACTIVE=0, OUT_ACTIVE=0, ACKED=0
+#   Input stall:            FB_ACTIVE>0 (when reported), PIPE_ACTIVE=0, OUT_ACTIVE=0, ACKED=0
 #   Pipeline stall:         PIPE_ACTIVE>0, OUT_ACTIVE=0, ACKED=0
 #   Output worker deadlock: OUT_ACTIVE>0, Q_PCT=1, ACKED=0, LAT_P999 extreme
 
@@ -218,8 +218,8 @@ run_table() {
 # ─────────────────────────────────────────────────────────────────────────────
 # Table A -- Output Health
 #
-# FB_ACTIVE   events in the filebeat input buffer (pre-pipeline)
-#             Source: .monitoring.metrics.filebeat.events.active
+# FB_ACTIVE   pre-pipeline input active events (filebeat-only source when present)
+#             Source: .monitoring.metrics.filebeat.events.active (blank when source metric is absent)
 #             High + PIPE_ACTIVE=0  -> input-to-pipeline stall
 #
 # OUT_ACTIVE  events currently in-flight to the output worker
@@ -238,6 +238,7 @@ run_table "Table A: Output Health" "A-output-health.tsv" '
     select(('"$CID_FILTER"') and (.monitoring.metrics.libbeat != null)) |
     .["@timestamp"] as $ts |
     (.["component.id"] // .component.id // "") as $cid |
+    ((.monitoring.metrics.filebeat.events | type) == "object" and (.monitoring.metrics.filebeat.events | has("active"))) as $has_fb_active |
     (.monitoring.metrics.filebeat.events.active // 0) as $fb_active |
     .monitoring.metrics.libbeat |
     [
@@ -247,7 +248,7 @@ run_table "Table A: Output Health" "A-output-health.tsv" '
       (.output.events.toomany                        // 0),
       (.output.events.dropped                        // 0),
       (.output.events.duplicates                     // 0),
-      $fb_active,
+      (if $has_fb_active then $fb_active else "" end),
       (.output.events.active                         // 0),
       (.output.events.batches                        // 0),
       (.output.write.bytes                           // 0),
@@ -298,25 +299,33 @@ run_table "Table C: Beat Resources" "C-beat-resources.tsv" '
   ["TIMESTAMP","COMPONENT_ID","VERSION","UPTIME_s",
    "CPU_TOTAL_ms","CPU_USER_ms","CPU_SYS_ms",
    "MEM_ALLOC_MB","RSS_MB","GOROUTINES",
-   "HARV_RUNNING","HARV_FILES"] | @tsv,
+   "HARV_RUNNING","HARV_FILES","FD_OPEN","FD_LIMIT","REGISTRAR"] | @tsv,
   (inputs |
     select(('"$CID_FILTER"') and (.monitoring.metrics.beat != null)) |
     .["@timestamp"] as $ts |
     (.["component.id"] // .component.id // "") as $cid |
     .monitoring.metrics as $m |
-    $m.beat |
+    ($m.beat // {}) as $b |
+    (($m.filebeat.harvester | type) == "object" and ($m.filebeat.harvester | has("running"))) as $has_harv_running |
+    (($m.filebeat.harvester | type) == "object" and ($m.filebeat.harvester | has("open_files"))) as $has_harv_files |
+    (($b.handles | type) == "object" and ($b.handles | has("open"))) as $has_fd_open |
+    (($b.handles | type) == "object" and ($b.handles | has("limit"))) as $has_fd_limit |
+    (($m.filebeat.registrar.states | type) == "object" and ($m.filebeat.registrar.states | has("current"))) as $has_registrar |
     [
       $ts, $cid,
-      .info.version,
-      (.info.uptime.ms / 1000 | round),
-      (.cpu.total.time.ms       // 0),
-      (.cpu.user.time.ms        // 0),
-      (.cpu.system.time.ms      // 0),
-      (.memstats.memory_alloc / 1048576 | round),
-      (.memstats.rss          / 1048576 | round),
-      (.runtime.goroutines      // 0),
-      (($m.filebeat.harvester.running   // 0)),
-      (($m.filebeat.harvester.open_files // 0))
+      ($b.info.version // ""),
+      (($b.info.uptime.ms // 0) / 1000 | round),
+      ($b.cpu.total.time.ms       // 0),
+      ($b.cpu.user.time.ms        // 0),
+      ($b.cpu.system.time.ms      // 0),
+      (($b.memstats.memory_alloc // 0) / 1048576 | round),
+      (($b.memstats.rss          // 0) / 1048576 | round),
+      ($b.runtime.goroutines      // 0),
+      (if $has_harv_running then ($m.filebeat.harvester.running // 0) else "" end),
+      (if $has_harv_files then ($m.filebeat.harvester.open_files // 0) else "" end),
+      (if $has_fd_open then ($b.handles.open // 0) else "" end),
+      (if $has_fd_limit then ($b.handles.limit // 0) else "" end),
+      (if $has_registrar then ($m.filebeat.registrar.states.current // 0) else "" end)
     ] | @tsv
   )
 '
