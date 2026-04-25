@@ -60,6 +60,7 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .logo-mark{width:28px;height:28px;background:linear-gradient(135deg,#00d4ff,#7c5cfc);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
 .logo-name{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em}
 .logo-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.app-version{letter-spacing:.04em;opacity:.9}
 .repo-link{
   font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
   color:var(--mid);text-decoration:none;
@@ -557,7 +558,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 <header>
   <div class="logo">
     <div class="logo-mark">&#9889;</div>
-    <div class="logo-text"><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Component performance</div></div>
+    <div class="logo-text"><div class="logo-name">ELASTIC AGENT</div><div class="logo-tag">Component performance <span class="app-version" id="app-version" title="Input analyzer build; same value as the VERSION file in the repository"></span></div></div>
     <a class="repo-link" href="https://github.com/rseldner/elastic-agent-component-perf-analyzer" target="_blank" rel="noopener noreferrer" aria-label="Open project repository on GitHub">GitHub Repo</a>
   </div>
   <div class="hdr-actions">
@@ -768,7 +769,10 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 </div>
 <script>
+/** Web analyzer build. Bump together with the repository root `VERSION` file. */
+const APP_VERSION='1.0.0';
 const DATA={A:null,B:null,C:null,D:null,E:null};
+(function(){const e=document.getElementById('app-version');if(e)e.textContent='· v'+APP_VERSION;})();
 const CHARTS={};
 const PREFIX_MAP={'A-output-health':'A','B-pipeline-queue':'B','C-beat-resources':'C','D-input-processing':'D','E-health-ratios':'E'};
 let SOURCE_MODE=null; // 'tsv' | 'ndjson' | null

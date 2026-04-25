@@ -4,6 +4,8 @@
 
 Explore Elastic Agent component performance from diagnostic exports in one browser dashboard: `input-analyzer.html`.
 
+**Versioning:** the release is recorded in the repository root `VERSION` file. The in-browser app shows that build next to the header subtitle (`APP_VERSION` in `input-analyzer.html`; keep the two in sync). The `elastic-agent-perf.sh` extractor reads `VERSION` automatically, supports `--version`, and writes `EXTRACTOR_VERSION.txt` into each `perf-analysis-*` output folder.
+
 It supports both:
 
 - raw NDJSON log files (`elastic-agent-*.ndjson`), and

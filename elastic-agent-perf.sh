@@ -12,6 +12,10 @@
 #   --component-regex <pat>  Analyze components whose ID matches a regex
 #   --list                   List discovered components and exit
 #
+# Version:
+#   The extractor version is in the file VERSION in the same directory as this
+#   script. Run: ./elastic-agent-perf.sh --version
+#
 # Examples:
 #   ./elastic-agent-perf.sh --all .
 #   ./elastic-agent-perf.sh --component filestream-7d25f7b1 /path/to/logs
@@ -38,6 +42,17 @@
 
 set -euo pipefail
 
+# Release version: single line in this repo's VERSION file (kept next to this script)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PERF_TOOL_VERSION="dev"
+if [[ -f "${_SCRIPT_DIR}/VERSION" ]]; then
+  IFS= read -r _v < "${_SCRIPT_DIR}/VERSION" || true
+  _v="${_v//$'\r'/}"
+  _v="${_v#"${_v%%[![:space:]]*}"}"; _v="${_v%"${_v##*[![:space:]]}"}"
+  [[ -n "$_v" ]] && PERF_TOOL_VERSION="$_v"
+  unset _v
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Parse flags
 # ─────────────────────────────────────────────────────────────────────────────
@@ -52,9 +67,16 @@ while [[ $# -gt 0 ]]; do
     --component)         OPT_COMPONENT="$2";     shift 2 ;;
     --component-regex)   OPT_REGEX="$2";         shift 2 ;;
     --list)              OPT_LIST=true;           shift ;;
+    --version|-V)
+      echo "elastic-agent-perf.sh $PERF_TOOL_VERSION"
+      exit 0
+      ;;
     --help|-h)
       sed -n '2,/^set -/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
-      exit 0 ;;
+      echo ""
+      echo "Version: $PERF_TOOL_VERSION  (from VERSION next to this script; use --version)"
+      exit 0
+      ;;
     -*)  echo "Unknown option: $1"; exit 1 ;;
     *)   break ;;
   esac
@@ -71,15 +93,20 @@ fi
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 OUT_DIR="${LOG_DIR}/perf-analysis-${TIMESTAMP}"
 mkdir -p "$OUT_DIR"
+{
+  echo "extractor: elastic-agent-perf.sh"
+  echo "version:   ${PERF_TOOL_VERSION}"
+} > "${OUT_DIR}/EXTRACTOR_VERSION.txt"
 
 SEP="═══════════════════════════════════════════════════════"
 
 echo ""
 echo "$SEP"
-echo " Elastic Agent component performance"
+echo " Elastic Agent component performance  (extractor v${PERF_TOOL_VERSION})"
 echo "$SEP"
 echo " Log dir   : ${LOG_DIR}"
 echo " Output    : ${OUT_DIR}"
+echo " Version   : ${PERF_TOOL_VERSION}  (also EXTRACTOR_VERSION.txt in output)"
 printf " Files     : %d\n" "$(echo "$FILES" | wc -l | tr -d ' ')"
 echo " Time range: $(jq -rn '[inputs | .["@timestamp"]] | sort | first' $FILES)"
 echo "           → $(jq -rn '[inputs | .["@timestamp"]] | sort | last'  $FILES)"
