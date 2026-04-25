@@ -243,6 +243,24 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
   font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--mid);margin:0 0 4px
 }
+/* Health state (per 30s): ack / stall class — not layer dominance */
+.flow-state-strip{
+  display:flex;align-items:stretch;
+  height:20px;border-radius:4px;overflow:hidden;
+  width:100%;min-width:0;box-shadow:0 0 0 1px var(--bdr) inset;
+  margin:0 0 6px;gap:1px
+}
+.flow-state-strip--tight{gap:0}
+.flow-s-seg{flex:1;min-width:4px;min-height:0}
+.flow-s-idle{background:var(--bdr2)!important}
+.flow-s-idletail{background:var(--info)!important;opacity:0.92}
+.flow-state-legend{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
+  font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--mid);
+  margin:0 0 6px;min-width:0
+}
+.flow-slg-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.flow-slg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 .flow-dl-item{display:inline-flex;align-items:center;gap:4px}
 .flow-dl-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 .flow-dominant-strip{
@@ -631,8 +649,10 @@ table.itbl tr:hover td{background:var(--surf2)}
       </div>
       <p class="flow-viz-persist" id="flow-viz-persist" aria-hidden="true"></p>
       <div id="flow-viz-spark">
+        <div class="flow-state-strip" id="flow-state-strip" style="display:none" role="img" aria-label=""></div>
         <div class="flow-dominant-legend" id="flow-dominant-legend" aria-hidden="true"></div>
         <div class="flow-dominant-strip" id="flow-dominant-strip" style="display:none" role="img" aria-label=""></div>
+        <div class="flow-state-legend" id="flow-state-legend" style="display:none" aria-label="State strip key" aria-hidden="true"></div>
         <div class="chart-flow-spark-h"><canvas id="ch-flow-spark" height="120"></canvas></div>
       </div>
       <div id="flow-viz-passport"></div>
@@ -1627,6 +1647,33 @@ const FLOW_VIZ_KEY='inputAnalyzer.flowViz';
 const FLOW_VIZES=['spark','passport'];
 const FLOW_LAY_C=['#00c875','#00d4ff','#ffb830','#ff2d55'];// Ingest, Pipe, Queue, Out
 const FLOW_LAY_N=['Ingest','Pipe','Queue','Out'];
+const STATE_H_COL={flowing:'#00c875',input:'#f5a623',pipeline:'#ffb830',deadlock:'#ff2d55'};
+const STATE_H_LEG=[['flowing','Flowing'],['deadlock','Deadlock'],['pipeline','Pipeline stall'],['input','Input stall'],['idletail','Idle-tail (EOF)'],['idle','Idle']];
+let _flowVizIdleTail=false;
+function abRowAtIndex(A,B,i){
+  if(!A.length && !B.length) return{ a: {}, b: {} };
+  if(A.length && !B.length) return{ a: A[i], b: { PIPE_ACTIVE:0, Q_PCT:0, Q_FILLED:0, TIMESTAMP: A[i]&&A[i].TIMESTAMP } };
+  if(!A.length && B.length) return{ a: { ACKED:0, OUT_ACTIVE:0, FB_ACTIVE:0, FAILED:0, TIMESTAMP: B[i]&&B[i].TIMESTAMP }, b: B[i] };
+  return{ a: A[i], b: B[i] };
+}
+/**
+ * Per-30s pipeline health: flowing / stall classes / idle. Mirrors diagnoseLayer() thresholds, per row.
+ * For i=0, no prior ACK so ack delta = 0 (stops cumulative counter from forcing first cell green).
+ */
+function classifyStateInterval(i, aRow, bRow, prevARow, idleTail){
+  const ackD=prevARow?(Number(aRow.ACKED)||0)-(Number(prevARow.ACKED)||0):0;
+  if(ackD>0) return'flowing';
+  const out=Number(aRow.OUT_ACTIVE)||0;
+  const qRaw=bRow?Number(bRow.Q_PCT)||0:0;
+  const qNorm=qRaw>1?qRaw/100:qRaw;
+  const pipe=bRow?Number(bRow.PIPE_ACTIVE)||0:0;
+  const fb=Number(aRow.FB_ACTIVE)||0;
+  if(out>0 && qNorm >= 0.8) return'deadlock';
+  if(pipe>0 && out===0) return'pipeline';
+  if(fb>0) return'input';
+  if(idleTail) return'idletail';
+  return'idle';
+}
 /**
  * Aligns A and B to the same 30s rows by index (same as Event flow by layer), per component.
  */
@@ -1693,7 +1740,7 @@ function setFlowViz(mode){
   const totAck=A.length?sumKey(A,'ACKED'):0;
   const t0=(A[0]&&A[0].TIMESTAMP)||(B[0]&&B[0].TIMESTAMP);
   const t1=(A.length&&A[A.length-1].TIMESTAMP)||(B.length&&B[B.length-1].TIMESTAMP);
-  updateFlowVizPanels(A,B,totAck,xAxisRangeTitle(t0,t1));
+  updateFlowVizPanels(A,B,totAck,xAxisRangeTitle(t0,t1),_flowVizIdleTail);
 }
 function _buildPassportHtmlFromMerge(m, totAck){
   const c=FLOW_LAY_C, names=FLOW_LAY_N;
@@ -1743,7 +1790,83 @@ function _flowVizLegHtml(){
   const c=FLOW_LAY_C, n=FLOW_LAY_N;
   return n.map((lab,i)=>'<span class="flow-dl-item"><span class="flow-dl-sq" style="background:'+c[i]+'"></span> '+escHtml(lab)+'</span>').join(' ');
 }
-function updateFlowVizPanels(A, B, totAck, xRangeDashForTip){
+function _stateHLabel(st){
+  if(st==='flowing') return'Flowing';
+  if(st==='deadlock') return'Deadlock';
+  if(st==='pipeline') return'Pipeline';
+  if(st==='input') return'Input stall';
+  if(st==='idletail') return'Idle / EOF';
+  if(st==='idle') return'Idle';
+  return st;
+}
+function _stateHLegSwatchHtml(st){
+  if(st==='idle') return'<span class="flow-slg-sq flow-s-idle"></span>';
+  if(st==='idletail') return'<span class="flow-slg-sq flow-s-idletail" style="display:inline-block;vertical-align:middle;opacity:0.92"></span>';
+  return'<span class="flow-slg-sq" style="background:'+escAttr(STATE_H_COL[st]||'#999')+'"></span>';
+}
+function _flowStateLegHtml(used){
+  if(!used || !used.size) return'';
+  const h=[];
+  STATE_H_LEG.forEach(function(pair){
+    const k=pair[0], lab=pair[1];
+    if(used.has(k)) h.push('<span class="flow-slg-item">'+_stateHLegSwatchHtml(k)+' '+escHtml(lab)+'</span>');
+  });
+  return h.join(' ');
+}
+function _buildStateStrip(m, A, B, idleT){
+  const el=document.getElementById('flow-state-strip');
+  const le=document.getElementById('flow-state-legend');
+  if(!el) return{ used: new Set() };
+  if(!m.ts || !m.ts.length){
+    el.style.display='none';
+    el.innerHTML='';
+    if(le){le.style.display='none';le.innerHTML='';}
+    return{ used: new Set() };
+  }
+  const n=m.ts.length;
+  el.classList.toggle('flow-state-strip--tight', n>120);
+  const used=new Set();
+  const h=[];
+  for(let i=0;i<n;i++){
+    const ab=abRowAtIndex(A,B,i);
+    const a=ab.a, b=ab.b;
+    const prevA= A.length ? (i>0?A[i-1]:null) : (i>0?{ ACKED:0, OUT_ACTIVE:0, FB_ACTIVE:0, TIMESTAMP: B[i-1]&&B[i-1].TIMESTAMP }:null);
+    const st=classifyStateInterval(i, a, b, prevA, !!idleT);
+    used.add(st);
+    const ackD= prevA? (Number(a.ACKED)||0)-(Number(prevA.ACKED)||0) :0;
+    const fb=Number(a.FB_ACTIVE)||0;
+    const pipe=b?Number(b.PIPE_ACTIVE)||0:0;
+    const out=Number(a.OUT_ACTIVE)||0;
+    const qP=b?Number(b.Q_PCT)||0:0;
+    const qShow=qP<=1?qP*100:qP;
+    const tip=String(m.ts[i]||'').slice(11,19)+'  '+_stateHLabel(st)
+      +'. ACKed \u0394: '+ackD+'; FB: '+fmt(fb,0)+'; PIPE: '+fmt(pipe,0)+'; OUT: '+fmt(out,0)
+      +'; Q_PCT: '+fmt(qShow,1)+'%';
+    if(st==='idle')
+      h.push('<div class="flow-s-seg flow-s-idle" title="'+escAttr(tip)+'"></div>');
+    else if(st==='idletail')
+      h.push('<div class="flow-s-seg flow-s-idletail" title="'+escAttr(tip)+'"></div>');
+    else
+      h.push('<div class="flow-s-seg" style="background:'+escAttr(STATE_H_COL[st]||'#888')+'" title="'+escAttr(tip)+'"></div>');
+  }
+  el.style.display='flex';
+  el.innerHTML=h.join('');
+  el.setAttribute('aria-label',n+' 30s intervals, pipeline state (ack / stall) per row');
+  if(le){
+    const lhtml=_flowStateLegHtml(used);
+    if(lhtml){
+      le.style.display='flex';
+      le.setAttribute('aria-hidden','false');
+      le.innerHTML=lhtml;
+    }else{
+      le.style.display='none';
+      le.innerHTML='';
+    }
+  }
+  return{ used: used };
+}
+function updateFlowVizPanels(A, B, totAck, xRangeDashForTip, idleTailArg){
+  const idleT=idleTailArg===void 0?!!_flowVizIdleTail:!!idleTailArg;
   const w=document.getElementById('flow-viz-wrap');
   const sSpark=document.getElementById('flow-viz-spark');
   const sPass=document.getElementById('flow-viz-passport');
@@ -1756,12 +1879,17 @@ function updateFlowVizPanels(A, B, totAck, xRangeDashForTip){
     sPass.innerHTML='';
     sSpark.classList.remove('fv-on');
     sPass.classList.remove('fv-on');
+    const sst=document.getElementById('flow-state-strip');
+    if(sst){sst.style.display='none';sst.innerHTML='';}
+    const sleg=document.getElementById('flow-state-legend');
+    if(sleg){sleg.style.display='none';sleg.innerHTML='';}
     return;
   }
   w.style.display='block';
   syncFlowVizSeg();
   const m=mergeLayerSeries(A,B);
   sPass.innerHTML=_buildPassportHtmlFromMerge(m, totAck);
+  _buildStateStrip(m, A, B, idleT);
   _buildDominantStrip(m);
   if(sLegend){
     sLegend.style.display='flex';
@@ -1773,7 +1901,7 @@ function updateFlowVizPanels(A, B, totAck, xRangeDashForTip){
     sPersist.style.display='block';
     sPersist.setAttribute('aria-hidden','false');
     sPersist.innerHTML= v==='spark'
-    ?'Multiband: four <strong>filled</strong> lines on the same 30&thinsp;s index. The strip above uses one color per interval: which layer&rsquo;s in-flight <em>event count</em> was largest (ties: ingest &rarr; pipe &rarr; queue &rarr; out; gray = all zero).'
+    ?'<strong>State strip</strong> (top) = per-interval <em>health</em> (ACK step, stall heuristics, idle/EOF). <strong>Dominant strip + legend</strong> = which layer&rsquo;s in-flight <em>count</em> was largest (argmax; ties ingest &rarr; pipe &rarr; queue &rarr; out). <strong>Multiband</strong> below: the four series on the same 30&thinsp;s index.'
     :'Passport: each column &mdash; the band is min&ndash;max over the load window; the dot is the <strong>latest</strong> 30&thinsp;s row. <strong>Acked</strong> = sum of counter deltas in the full window, not a layer range.'+(xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'');
   }
   sSpark.classList.toggle('fv-on', v==='spark');
@@ -2254,6 +2382,10 @@ function resetAll(){
   const fvs=document.getElementById('flow-viz-spark');
   if(fvs){
     fvs.classList.remove('fv-on');
+    const fss=document.getElementById('flow-state-strip');
+    if(fss){fss.style.display='none';fss.innerHTML='';}
+    const fslg=document.getElementById('flow-state-legend');
+    if(fslg){fslg.style.display='none';fslg.innerHTML='';fslg.setAttribute('aria-hidden','true');}
     const fdl=document.getElementById('flow-dominant-legend');
     if(fdl){fdl.innerHTML='';fdl.setAttribute('aria-hidden','true');}
     const fds=document.getElementById('flow-dominant-strip');
@@ -2261,6 +2393,7 @@ function resetAll(){
     const fvpst=document.getElementById('flow-viz-persist');
     if(fvpst){fvpst.innerHTML='';fvpst.setAttribute('aria-hidden','true');}
   }
+  _flowVizIdleTail=false;
   if(fvp)fvp.classList.remove('fv-on');
   setHdrStatus('no data loaded');
   syncComponentIdCopyUi('');
@@ -2463,7 +2596,8 @@ function renderComp(cid){
     const frx=document.getElementById('flow-rollup-hint');
     if(frx){frx.style.display='none';frx.innerHTML='';frx.setAttribute('aria-hidden','true');}
   }
-  updateFlowVizPanels(A,B,totAck,xRangeDash);
+  _flowVizIdleTail=!!idleTailPattern;
+  updateFlowVizPanels(A,B,totAck,xRangeDash,idleTailPattern);
 
   // HEALTH GRID
   if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
