@@ -48,6 +48,8 @@ D-input-processing.tsv
 E-health-ratios.tsv
 ```
 
+- **D** (`D-input-processing.tsv`) — per-dataset-key `processing_time` from `monitoring.dataset` in the logs (not the same as the ingestion buffer / FB_ACTIVE in the UI). Omitted if the beat never reports those histograms.
+
 ### Visualize TSV output
 
 Open `input-analyzer.html` in a browser, then drop that `perf-analysis-*` folder (or A-E `.tsv` files). Missing tables are skipped gracefully.

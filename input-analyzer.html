@@ -191,6 +191,16 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 }
 .flow-var-wrap abbr{cursor:help;text-decoration:underline dotted;text-underline-offset:2px;text-decoration-color:var(--bdr2)}
 .flow-var-wrap strong{color:var(--mid);font-weight:600}
+.flow-var-cv .flow-var-cv-hd{font-size:10px;color:var(--dim);margin:0 0 4px;letter-spacing:.02em}
+.flow-var-cv .flow-var-cv-subhd{font-size:9px;opacity:0.88;color:var(--dim);margin:0 0 6px;max-width:100ch;line-height:1.45}
+.flow-var-cv .flow-var-cv-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;row-gap:6px}
+.flow-var-cv .fvs-col{display:flex;flex-direction:column;gap:2px;min-width:0;cursor:default}
+.flow-var-cv .fvs-line1{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 5px}
+.flow-var-cv .fvs-line2{font-size:9px;opacity:0.9;color:var(--dim);letter-spacing:0.01em;white-space:nowrap}
+.flow-var-cv .fvs{white-space:nowrap;color:var(--mid);font-size:10px;cursor:default}
+.flow-var-cv .fvs-na{opacity:.72;color:var(--dim)}
+.flow-var-cv .fvs b{font-weight:600;color:var(--text)}
+.flow-var-cv .fvs-fld{color:var(--dim);font-weight:500;letter-spacing:.04em}
 .flow-persist{
   font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);line-height:1.65;
   margin-bottom:14px;width:100%;max-width:100%;min-width:0;
@@ -202,15 +212,28 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .fn-val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500}
 .fn-sub{font-size:10px;color:var(--dim);margin-top:2px}
 .fn-val.ok{color:var(--ok)} .fn-val.warn{color:var(--warn)} .fn-val.err{color:var(--err)} .fn-val.crit{color:var(--crit)} .fn-val.dim{color:var(--dim)}
+/* Flow link lines: "flowing" = not this stall *class* on the leg, not "healthy" — use --info, not --ok. */
 .flow-arrow{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 4px;min-width:44px}
+.flow-arrow[role="img"]{min-width:52px}
 .fa-line{width:100%;height:2px;background:var(--bdr2)}
 .fa-line.blocked{background:var(--crit)}
-.fa-line.flowing{background:var(--ok)}
+.fa-line.flowing{background:var(--info)}
 .fa-line.idle-tail{background:linear-gradient(90deg,rgba(0,212,255,.25),rgba(0,212,255,.55),rgba(0,212,255,.25))}
-.fa-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);margin-top:3px;white-space:nowrap}
-.fa-label.blocked{color:var(--crit)}
-.fa-label.flowing{color:var(--ok)}
-.fa-label.idle-tail{color:var(--info)}
+.fa-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--dim);margin-top:3px;white-space:normal;max-width:6.5rem;line-height:1.25;text-align:center}
+.fa-label.blocked{color:var(--crit);max-width:5.8rem;white-space:normal}
+.fa-label.flowing{color:var(--info);font-weight:500}
+.fa-label.idle-tail{color:var(--info);white-space:nowrap;max-width:none}
+[data-theme="light"] .fa-line.flowing{opacity:0.92}
+.flow-legend{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--mid);line-height:1.55;
+  margin:0 0 12px;padding:8px 10px;border-radius:6px;
+  background:rgba(126,200,227,.06);border:1px solid rgba(0,153,204,.2)
+}
+[data-theme="light"] .flow-legend{background:rgba(0,100,150,.04);border-color:rgba(0,100,150,.12)}
+.flow-legend-k{max-width:90ch}
+.flow-rollup-hint{display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06);color:var(--dim);font-size:8.5px;letter-spacing:0.01em;max-width:90ch}
+[data-theme="light"] .flow-rollup-hint{border-top-color:rgba(0,0,0,.06)}
+.flow-rollup-hint code{font-size:inherit;padding:0 1px}
 .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:20px}
 .hc{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;text-align:center}
 .hc-icon{font-size:18px;margin-bottom:4px}
@@ -313,7 +336,7 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .cc.full{grid-column:1/-1}
 /* Full-row charts otherwise grow with viewport width (Chart.js default aspect ratio). */
 .chart-fixed-h{position:relative;height:min(260px,42vh);min-height:200px;width:100%}
-/* Input bar chart: extra vertical room for multiline per-input x labels */
+/* Table D bar chart: extra vertical room for multiline dataset-key x labels */
 .chart-fixed-h.chart-ibar-h{min-height:min(380px,55vh);height:min(340px,50vh)}
 .cc.stalled{border-color:rgba(255,45,85,.25)}
 .cc.stalled .cc-title::after{content:' \2014 ALL ZERO';font-size:9px;font-weight:400;color:var(--crit);letter-spacing:.06em}
@@ -486,7 +509,7 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="fs" id="fs-A"><div class="fs-key">A &middot; Output</div><div class="fs-name">not loaded</div></div>
     <div class="fs" id="fs-B"><div class="fs-key">B &middot; Pipeline</div><div class="fs-name">not loaded</div></div>
     <div class="fs" id="fs-C"><div class="fs-key">C &middot; Resources</div><div class="fs-name">not loaded</div></div>
-    <div class="fs" id="fs-D"><div class="fs-key">D &middot; Inputs</div><div class="fs-name">not loaded</div></div>
+    <div class="fs" id="fs-D"><div class="fs-key">D &middot; Dataset keys</div><div class="fs-name">not loaded</div></div>
     <div class="fs" id="fs-E"><div class="fs-key">E &middot; Ratios</div><div class="fs-name">not loaded</div></div>
   </div>
   <button class="go-btn" id="go-btn" disabled onclick="showDashboard()">Drop files to begin &#8594;</button>
@@ -497,20 +520,6 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="dash-meta">COMPONENT &nbsp;<span class="dash-comp-wrap"><b id="m-comp">&mdash;</b><button type="button" class="id-copy-btn id-copy-btn--inline" id="dash-comp-copy" hidden disabled title="Copy component ID" aria-label="Copy component ID">&#128203;</button></span><br>WINDOW &nbsp;&nbsp;&nbsp;<b id="m-win">&mdash;</b><br>INTERVALS &nbsp;<b id="m-int">&mdash;</b></div>
     <div class="dash-actions">
       <div class="dash-actions-col">
-        <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
-          <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
-            <span class="inp-cap-toggle-main">All components · per-input processing</span>
-            <span class="inp-cap-toggle-meta" id="inp-cap-meta"></span>
-            <span class="inp-cap-toggle-chev" aria-hidden="true">&#9660;</span>
-          </button>
-          <div id="inp-cap-body" class="inp-cap-body" hidden>
-            <div class="inp-ov-wrap inp-ov-wrap--solo">
-              <p class="inp-overview-note">Every input series in <code>D-input-processing.tsv</code> in this load, across <strong>all components</strong> (same status rules as <strong>Per-input processing</strong> below). Click a row to select that component and jump to its table. The two clipboard icons on each row copy the <strong>component ID</strong> (top) and <strong>input ID</strong> (bottom).</p>
-              <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
-              <div class="inp-ov-groups" id="inp-ov-groups"></div>
-            </div>
-          </div>
-        </div>
         <div class="comp-sel-panel">
           <label class="comp-sel-lbl" for="comp-sel">Component Details</label>
           <div class="comp-sel-row">
@@ -518,6 +527,20 @@ table.itbl tr:hover td{background:var(--surf2)}
               <select id="comp-sel" class="comp-sel" aria-label="Select component ID"></select>
             </div>
             <button type="button" class="id-copy-btn" id="comp-sel-copy" hidden disabled title="Copy selected component ID" aria-label="Copy selected component ID">&#128203;</button>
+          </div>
+        </div>
+        <div id="inp-cap-root" class="inp-cap-root" style="display:none" aria-hidden="true">
+          <button type="button" class="inp-cap-toggle" id="inp-cap-toggle" aria-expanded="false" aria-controls="inp-cap-body">
+            <span class="inp-cap-toggle-main">Dataset keys (selected component)</span>
+            <span class="inp-cap-toggle-meta" id="inp-cap-meta"></span>
+            <span class="inp-cap-toggle-chev" aria-hidden="true">&#9660;</span>
+          </button>
+          <div id="inp-cap-body" class="inp-cap-body" hidden>
+            <div class="inp-ov-wrap inp-ov-wrap--solo">
+              <p class="inp-overview-note">Status for <strong>dataset keys on the selected component</strong> only (Beats&rsquo; <code>monitoring.dataset</code> map, same rules as <strong>Table D</strong> below). This is <em>not</em> the &ldquo;ingestion / input buffer&rdquo; gauges in <strong>Event flow by layer</strong> (FB_ACTIVE). Click a row to scroll to Table D. Clipboard buttons copy the <strong>component ID</strong> (top) and <strong>dataset key</strong> (bottom).</p>
+              <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
+              <div class="inp-ov-groups" id="inp-ov-groups"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -532,16 +555,20 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="flow-toolbar">
         <span class="flow-mode-lbl" id="flow-mode-lbl">Roll-up</span>
         <div class="flow-mode-seg" role="tablist" aria-label="Event flow roll-up">
-          <button type="button" role="tab" data-flow-mode="latest" aria-selected="true" onclick="setFlowMode('latest')">Latest</button>
-          <button type="button" role="tab" data-flow-mode="worst" aria-selected="false" onclick="setFlowMode('worst')">Worst</button>
-          <button type="button" role="tab" data-flow-mode="best" aria-selected="false" onclick="setFlowMode('best')">Best</button>
-          <button type="button" role="tab" data-flow-mode="mean" aria-selected="false" onclick="setFlowMode('mean')">Mean</button>
+          <button type="button" role="tab" data-flow-mode="latest" aria-selected="true" title="One 30s sample: each box is from the same row (aligned in time).&#10;Hover: strip legend below for box vs link colors." onclick="setFlowMode('latest')">Latest</button>
+          <button type="button" role="tab" data-flow-mode="worst" aria-selected="false" title="Peak: max value per series across the load window. Peaks for ingest, queue, and out are usually not the same 30s row.&#10;Use Latest or the Event flow by layer chart to see timing." onclick="setFlowMode('worst')">Worst</button>
+          <button type="button" role="tab" data-flow-mode="best" aria-selected="false" title="Min: per-series minimum in the load window. Columns are not necessarily the same 30s sample." onclick="setFlowMode('best')">Best</button>
+          <button type="button" role="tab" data-flow-mode="mean" aria-selected="false" title="Mean: average of samples per field across the load window.&#10;All columns are temporal averages, not a single row." onclick="setFlowMode('mean')">Mean</button>
         </div>
       </div>
     </div>
     <div class="flow-var-wrap" id="flow-var-wrap"></div>
     <div class="flow-persist" id="flow-persist"></div>
-    <div class="flow-row" id="flow-row"></div>
+    <div class="flow-legend" id="flow-legend" style="display:none" aria-label="Event flow box vs link key">
+      <div class="flow-legend-k"><strong>Boxes</strong> = gauge level (warn / crit from fixed size bands for each metric). <strong>Links</strong> = whether this hop matches a stall <em>signature</em> (see the stall banner) &mdash; not a second &ldquo;all clear&rdquo; for pressure, so a red full queue can still sit next to a cyan (non-stall-class) link.</div>
+      <div class="flow-rollup-hint" id="flow-rollup-hint" aria-hidden="true"></div>
+    </div>
+    <div class="flow-row" id="flow-row" role="group" aria-label="Rolled-up event flow: ingest, queue, out, acked"></div>
   </div>
   <div class="health-grid" id="health-grid"></div>
   <div id="alerts"></div>
@@ -558,7 +585,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="cc-head-row">
           <div class="cc-head-titles">
             <div class="cc-title">In-flight events per pipeline layer</div>
-            <div class="cc-sub">FB_ACTIVE (input buffer) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; identifies WHERE events are jammed</div>
+            <div class="cc-sub">FB_ACTIVE (ingestion buffer, pre-pipeline) &middot; PIPE_ACTIVE (pipeline) &middot; OUT_ACTIVE (output inflight) &mdash; where events are jammed. Distinct from Table D &ldquo;dataset keys&rdquo; (codec / ingress processing time).</div>
           </div>
           <div class="cc-layer-ctrl">
             <div class="cc-tip-wrap">
@@ -579,20 +606,20 @@ table.itbl tr:hover td{background:var(--surf2)}
   </div>
 
   <div class="sec" id="sec-inp" style="display:none">
-    <div class="sec-hd">Per-input processing</div>
+    <div class="sec-hd">Ingestion codec &amp; processing (dataset keys)</div>
     <div id="inp-empty-hint" class="cc full" style="display:none">
-      <div class="cc-title">No per-input rows for this view</div>
+      <div class="cc-title">No dataset keys for this view</div>
       <div class="cc-sub" id="inp-empty-text"></div>
     </div>
     <div id="inp-body">
       <div class="cc full">
-        <div class="cc-title" style="margin-bottom:2px">Input detail</div>
-        <p class="inp-detail-note">Each column is from the <strong>latest 30&nbsp;s row</strong> in <code>D-input-processing.tsv</code> for that input. The underlying metric is <code>monitoring.dataset.&lt;input_id&gt;.processing_time.histogram</code> in the diagnostic NDJSON (extractor converts ns &rarr; ms). That histogram is a <strong>lifetime reservoir</strong>, not a per-window delta: mean / median / percentiles describe how long <strong>codec + input-side processing</strong> took for observations accumulated in the histogram since the input started.</p>
+        <div class="cc-title" style="margin-bottom:2px">Dataset key detail</div>
+        <p class="inp-detail-note">Each row is a <strong>dataset key</strong> (the key in <code>monitoring.dataset</code> in the diagnostic, shown here as a column) &mdash; not the same as the <strong>ingestion buffer</strong> (FB_ACTIVE) in Event flow. Each value is from the <strong>latest 30&nbsp;s row</strong> in <code>D-input-processing.tsv</code> for that key. The underlying JSON path is <code>monitoring.dataset.&lt;dataset_key&gt;.processing_time.histogram</code> (extractor converts ns &rarr; ms). The histogram is a <strong>lifetime reservoir</strong>, not a per-window delta: mean / median / percentiles reflect how long <strong>codec + input-side processing</strong> took for observations accumulated in the reservoir for that key since it started.</p>
         <div class="tscroll">
           <table class="itbl">
             <thead><tr>
-              <th>Input ID</th>
-              <th class="num" title="Histogram sample count: how many processing-time observations are in the lifetime reservoir for this input (same as histogram.count in Beats/Agent monitoring). Rises as new events are processed; if this number never changes across loaded intervals, the input is not adding new samples (idle tail, stalled publish path, or frozen metric).">Samples<span class="th-hint">histogram count</span></th>
+              <th>Dataset key</th>
+              <th class="num" title="Histogram sample count: how many processing-time observations are in the lifetime reservoir for this dataset key (same as histogram.count in Beats/Agent monitoring). Rises as new events are processed; if this number never changes across loaded intervals, the key is not adding new samples (idle tail, stalled publish path, or frozen metric).">Samples<span class="th-hint">histogram count</span></th>
               <th class="num" title="Arithmetic mean of processing times in the reservoir (ms).">Mean</th>
               <th class="num" title="Median processing time (ms).">Median</th>
               <th class="num" title="95th percentile of processing time in the reservoir (ms).">P95</th>
@@ -607,7 +634,7 @@ table.itbl tr:hover td{background:var(--surf2)}
         <div class="inp-status-legend"><strong>FROZEN</strong> &mdash; sample count is identical on every loaded interval (no new histogram observations in this capture). <strong>CRITICAL</strong> &mdash; P99 processing time &gt; 30&nbsp;s. <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
       </div>
       <div class="cgrid" style="margin-top:12px">
-        <div class="cc full"><div class="cc-title">Processing time per input &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long input IDs wrap to several lines; tooltip title shows the full id. <strong>Click a bar</strong> to copy that input&rsquo;s full ID.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
+        <div class="cc full"><div class="cc-title">Processing time per dataset key &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long keys wrap to several lines; tooltip title shows the full id. <strong>Click a bar</strong> to copy that key in full.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -1243,12 +1270,12 @@ function fmtBytes(b){
 }
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
-/** Tiny clipboard control; `kind` is only for aria/title. */
+/** Tiny clipboard control; `kind` is only for aria/title (comp | dsk | input maps to dataset key). */
 function copyIdentBtnHtml(fullId,kind){
-  kind=kind||'input';
-  const lab=kind==='comp'?'component':'input';
+  kind=kind||'dsk';
+  const lab=kind==='comp'?'component':(kind==='dsk'||kind==='input'?'dataset key':'ID');
   const f=String(fullId==null?'':fullId);
-  return'<button type="button" class="id-copy-btn id-copy-btn--micro" data-copy="'+escAttr(f)+'" title="Copy full '+lab+' ID" aria-label="Copy '+lab+' ID">&#128203;</button>';
+  return'<button type="button" class="id-copy-btn id-copy-btn--micro" data-copy="'+escAttr(f)+'" title="Copy full '+lab+'" aria-label="Copy '+lab+'">&#128203;</button>';
 }
 function setHdrStatus(label,opts){
   opts=opts||{};
@@ -1338,24 +1365,73 @@ function seriesMeanStd(vals){
   const v=vals.reduce((s,x)=>{const d=x-mean;return s+d*d;},0)/(n-1);
   return{mean,std:Math.sqrt(Math.max(0,v))};
 }
+/** One backlog gauge: sample mean, s.d., and CV = \u03c3/\u03bc (null when \u03bc \u2248 0). */
+function backlogWindowSeries(vals){
+  if(!vals||!vals.length)return null;
+  const{mean,std}=seriesMeanStd(vals);
+  return{mean,std,cv:mean>1e-3?std/mean:null};
+}
 /**
- * Pooled relative spread: mean of per-series CV (σ/μ) for backlog gauges where μ>0.
- * Interprets how bursty the window was vs a flat line.
+ * Per-layer full-window stats (events) for the four backlog gauges. null for a key if that table is missing.
  */
-function pooledCvAlpha(A,B){
-  const cvs=[];
-  if(A&&A.length)['FB_ACTIVE','OUT_ACTIVE'].forEach(k=>{
-    const vals=A.map(r=>Number(r[k])||0);
-    const{mean,std}=seriesMeanStd(vals);
-    if(mean>1e-3)cvs.push(std/mean);
-  });
-  if(B&&B.length)['PIPE_ACTIVE','Q_FILLED'].forEach(k=>{
-    const vals=B.map(r=>Number(r[k])||0);
-    const{mean,std}=seriesMeanStd(vals);
-    if(mean>1e-3)cvs.push(std/mean);
-  });
-  if(!cvs.length)return null;
-  return cvs.reduce((a,b)=>a+b,0)/cvs.length;
+function perSeriesBacklogStats(A,B){
+  return{
+    fb:A&&A.length?backlogWindowSeries(A.map(r=>Number(r.FB_ACTIVE)||0)):null,
+    out:A&&A.length?backlogWindowSeries(A.map(r=>Number(r.OUT_ACTIVE)||0)):null,
+    pipe:B&&B.length?backlogWindowSeries(B.map(r=>Number(r.PIPE_ACTIVE)||0)):null,
+    q:B&&B.length?backlogWindowSeries(B.map(r=>Number(r.Q_FILLED)||0)):null
+  };
+}
+function fmtCvSublabelVal(v){
+  if(v==null||!isFinite(v))return'';
+  if(v<0.01)return v.toFixed(3);
+  if(v<10)return v.toFixed(2);
+  return v.toFixed(1);
+}
+function fmtBacklogWindowGauge(n){
+  if(n==null||!isFinite(n))return'\u2014';
+  if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';
+  if(Math.abs(n)>=100)return n.toFixed(0);
+  if(Math.abs(n)>=10)return n.toFixed(1);
+  if(Math.abs(n)>=0.1)return n.toFixed(2);
+  return n.toFixed(3);
+}
+const FLOW_VAR_SERIES_SPECS=[
+  {key:'fb',short:'Ingest',long:'FB_ACTIVE (ingestion buffer backlog)'},
+  {key:'pipe',short:'Pipe',long:'PIPE_ACTIVE (events in the beat pipeline)'},
+  {key:'q',short:'Queue',long:'Q_FILLED (events in the queue)'},
+  {key:'out',short:'Out',long:'OUT_ACTIVE (events in flight to the output worker)'}
+];
+/**
+ * Line 1: CV = \u03c3/\u03bc. Line 2: sample \u03bc, \u03c3 in events. Full window; not the roll-up mode strip.
+ */
+function buildFlowVariabilityHtml(stats){
+  if(!stats)return'';
+  if(!FLOW_VAR_SERIES_SPECS.some(s=>stats[s.key])){
+    const t='No table A/B rows for this component, so no backlog window stats.';
+    return'<div class="flow-var-cv" title="'+escAttr(t)+'"><div class="flow-var-cv-hd">Backlog variability in this window</div>'+
+      '<div class="flow-var-cv-row"><span class="fvs fvs-na">—</span></div></div>';
+  }
+  const cols=FLOW_VAR_SERIES_SPECS.map(s=>{
+    const st=stats[s.key];
+    if(!st){
+      const t='This column uses table '+(s.key==='fb'||s.key==='out'?'A':'B')+'; that table is empty in this view.';
+      return'<div class="fvs-col fvs-na" title="'+escAttr(t)+'"><div class="fvs-line1"><span class="fvs-fld">'+escHtml(s.short)+'</span> <b>—</b></div><div class="fvs-line2">no data</div></div>';
+    }
+    const{mean,std,cv}=st;
+    const main=cv==null?'<b>—</b>':'<b>'+escHtml(fmtCvSublabelVal(cv))+'</b>';
+    const subLine='\u03bc='+fmtBacklogWindowGauge(mean)+' &nbsp; \u03c3='+fmtBacklogWindowGauge(std);
+    const tip=escAttr(
+      s.long+'. Same ~30s samples as the charts. \u03bc and \u03c3 (events): sample mean and s.d. CV = \u03c3/\u03bc when \u03bc>0. Not affected by the Latest / Worst / Best / Mean strip above.'
+    );
+    return'<div class="fvs-col" title="'+tip+'"><div class="fvs-line1"><span class="fvs-fld">'+escHtml(s.short)+'</span> <span class="fvs">'+main+'</span></div>'+
+      '<div class="fvs-line2">'+subLine+'</div></div>';
+  }).join('');
+  return'<div class="flow-var-cv">'+
+    '<div class="flow-var-cv-hd">Backlog variability in this window <span class="fvs" style="font-size:9px;opacity:0.85" title="Entire load window; not the same as Latest on the strip.">(full window)</span></div>'+
+    '<div class="flow-var-cv-subhd">Line 1: CV = \u03c3/\u03bc. Line 2: \u03bc, \u03c3 (event counts) for the same window.</div>'+
+    '<div class="flow-var-cv-row">'+cols+'</div></div>';
 }
 const FLOW_MODE_STORAGE_KEY='inputAnalyzer.flowMode';
 const FLOW_MODES=['latest','worst','best','mean'];
@@ -1407,7 +1483,7 @@ function syncLayerChartYSeg(){
 /** Rich help for the in-flight layer chart (injected into #cc-layer-tip). */
 function layerChartHelpHtml(){
   return'<div class="lht">What you are looking at</div>'+
-  'Each line is a <strong>gauge snapshot every '+STALL_PERSIST.sampleS+'s</strong>: how many events are <em>currently</em> held in the filebeat input buffer (FB_ACTIVE), in the beat pipeline (PIPE_ACTIVE), or in-flight to the output worker (OUT_ACTIVE). They are <strong>parallel stages</strong>, not three slices of one additive total &mdash; the same event is not counted on all three lines at once.'+
+  'Each line is a <strong>gauge snapshot every '+STALL_PERSIST.sampleS+'s</strong>: how many events are <em>currently</em> held in the filebeat <strong>ingestion</strong> buffer (FB_ACTIVE), in the beat pipeline (PIPE_ACTIVE), or in-flight to the output worker (OUT_ACTIVE). They are <strong>parallel stages</strong>, not three slices of one additive total &mdash; the same event is not counted on all three lines at once.'+
   '<div class="lht">How we infer where a stall is</div>'+
   '<ul>'+
   '<li><strong>Cross-read the lines</strong> at the same time index: whichever layer stays high while throughput (ACKED) is flat at zero usually owns the bottleneck.</li>'+
@@ -1416,7 +1492,7 @@ function layerChartHelpHtml(){
   '</ul>'+
   '<div class="lht">Typical shapes (zero throughput)</div>'+
   '<ul>'+
-  '<li><strong>Input / buffer stall</strong> &mdash; FB_ACTIVE elevated or climbing while PIPE_ACTIVE and OUT_ACTIVE stay low; queue may be empty because nothing reaches it.</li>'+
+  '<li><strong>Ingestion buffer stall</strong> &mdash; FB_ACTIVE elevated or climbing while PIPE_ACTIVE and OUT_ACTIVE stay low; queue may be empty because nothing reaches it.</li>'+
   '<li><strong>Pipeline stall</strong> &mdash; PIPE_ACTIVE high, OUT_ACTIVE hugging zero (worker not taking from queue); FB may fall as the input buffer drains into the blocked pipeline.</li>'+
   '<li><strong>Output / &ldquo;deadlock&rdquo; signature</strong> &mdash; OUT_ACTIVE high with queue pressure high; FB/PIPE may dip if the queue backs up toward the output.</li>'+
   '<li><strong>Idle or quiet source</strong> &mdash; all three gauges near zero for the whole window with no acks (see idle-tail banner); harvesters may still be open at EOF.</li>'+
@@ -1457,8 +1533,30 @@ function flowMetricSub(mode,metric){
   if(mode==='best')return metric==='q'?'min %':'min';
   return metric==='q'?'mean %':'mean';
 }
+/**
+ * Accessible + tooltip string for a flow hop. "flowing" (cyan) = not that stall *class* on the leg, not "healthy".
+ */
+function flowLinkAria(leg, cls, idleTailPattern){
+  if(leg===1){
+    if(idleTailPattern) return'Ingestion to queue: EOF or idle-harvest (see banner) on this path.';
+    if(cls==='blocked') return'Ingestion to queue: matches the input-stall pattern (see stall banner).';
+    if(cls==='flowing') return'Ingestion to queue: this leg is not the input-stall class. Box color is separate gauge level.';
+    return'Ingestion to queue: ingestion at zero in this roll-up; neutral line. Other stages can still be busy.';
+  }
+  if(leg===2){
+    if(cls==='blocked') return'Queue to out inflight: matches the pipeline-stall pattern (see banner).';
+    if(cls==='flowing') return'Queue to out inflight: not the pipeline-stall class on this leg (per banner).';
+    return'Queue to out inflight: no pipeline in-flight in this roll-up; neutral line.';
+  }
+  if(leg===3){
+    if(cls==='blocked') return'Out inflight to output: output / ack stall (see banner), e.g. ES not acking.';
+    if(cls==='flowing') return'Out to destination: not the output/deadlock stall class on this leg (per banner).';
+    return'Out inflight: no output in-flight in this roll-up; neutral line.';
+  }
+  return'';
+}
 function byComp(rows,cid){if(!rows||!cid)return[];const c=String(cid).trim();return rows.filter(r=>String(r.COMPONENT_ID||'').trim()===c);}
-/** Latest-interval input processing status; same rules as the per-component table. */
+/** Latest-interval dataset key processing status; same rules as the per-component table. */
 function computeInputProcStatus(rowsForOneInput){
   if(!rowsForOneInput||!rowsForOneInput.length)
     return{pillClass:'ok',label:'OK',frozen:false,p99:0,last:null};
@@ -1486,7 +1584,7 @@ function inputLatencyHighlights(lastRow){
   if(max>30000)chips.push({cls:'hi-crit',text:'Max>30s'});
   return chips;
 }
-/** Preserve file order per (component, input) series. */
+/** Preserve file order per (component, dataset key) series. */
 function groupDRowsByInput(dRows){
   const order=[];
   const m=new Map();
@@ -1504,14 +1602,15 @@ function renderInputStatusOverview(allD,selectedCid){
   const tilesEl=document.getElementById('inp-ov-tiles');
   const groupsEl=document.getElementById('inp-ov-groups');
   if(!tilesEl||!groupsEl)return;
-  if(!allD||!allD.length){
+  const scoped=byComp(allD,selectedCid);
+  if(!scoped.length){
     tilesEl.innerHTML='';
     groupsEl.innerHTML='';
     return;
   }
   const statusOrder=['FROZEN+CRIT','CRITICAL','FROZEN','SLOW','OK'];
   const pillFor={ 'FROZEN+CRIT':'crit','CRITICAL':'crit','FROZEN':'frozen','SLOW':'err','OK':'ok' };
-  const items=groupDRowsByInput(allD).map(({comp,inputId,rows})=>{
+  const items=groupDRowsByInput(scoped).map(({comp,inputId,rows})=>{
     const st=computeInputProcStatus(rows);
     const hi=inputLatencyHighlights(st.last);
     return{comp,inputId,rows,st,hi};
@@ -1522,32 +1621,28 @@ function renderInputStatusOverview(allD,selectedCid){
     const n=counts[lab]||0;
     return'<div class="inp-ov-tile"><span class="pill '+pillFor[lab]+'">'+lab+'</span><div class="inp-ov-n">'+n+'</div></div>';
   }).join('');
+  const firstC=items.length?String(items[0].comp||'').trim():'';
   let html='';
   for(const lab of statusOrder){
     const list=items.filter(it=>it.st.label===lab);
     if(!list.length)continue;
-    list.sort((a,b)=>{
-      const ca=String(a.comp).localeCompare(String(b.comp));
-      if(ca!==0)return ca;
-      return String(a.inputId).localeCompare(String(b.inputId));
-    });
+    list.sort((a,b)=>String(a.inputId).localeCompare(String(b.inputId)));
     html+='<div class="inp-ov-grp">';
-    html+='<div class="inp-ov-grp-hd"><span class="pill '+pillFor[lab]+'">'+lab+'</span><span class="inp-ov-grp-n">'+list.length+' input'+(list.length===1?'':'s')+'</span></div>';
+    html+='<div class="inp-ov-grp-hd"><span class="pill '+pillFor[lab]+'">'+lab+'</span><span class="inp-ov-grp-n">'+list.length+' key'+(list.length===1?'':'s')+'</span></div>';
     html+='<ul class="inp-ov-ul">';
     for(const it of list){
       const id=it.inputId;
       const sid=id.length>52?escHtml(id.slice(0,46)+'\u2026'):escHtml(id);
-      const compDisp=it.comp.length>40?escHtml(it.comp.slice(0,36)+'\u2026'):escHtml(it.comp);
+      const compAttr=String(it.comp).trim()||selStr;
       const chips=it.hi.map(h=>'<span class="inp-ov-chip '+h.cls+'">'+h.text+'</span>').join('');
-      const sel=String(it.comp).trim()===String(selectedCid||'').trim()?' sel':'';
       html+='<li class="inp-ov-row">'+
-        '<button type="button" class="inp-ov-line'+sel+'" data-ov-cid="'+escAttr(it.comp)+'" title="Select this component; scroll to Input detail table">'+
-        '<span class="inp-ov-comp">'+compDisp+'</span><span class="inp-ov-sep">&middot;</span><span class="inp-ov-inp">'+sid+'</span>'+
+        '<button type="button" class="inp-ov-line" data-ov-cid="'+escAttr(compAttr)+'" title="Scroll to Table D (dataset key detail)">'+
+        '<span class="inp-ov-inp">'+sid+'</span>'+
         (chips?'<span class="inp-ov-hi">'+chips+'</span>':'')+
         '</button>'+
         '<div class="inp-ov-side">'+
-        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(it.comp)+'" title="Copy component ID" aria-label="Copy component ID">&#128203;</button>'+
-        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(id)+'" title="Copy input ID" aria-label="Copy input ID">&#128203;</button>'+
+        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(it.comp||firstC)+'" title="Copy component ID" aria-label="Copy component ID">&#128203;</button>'+
+        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(id)+'" title="Copy dataset key" aria-label="Copy dataset key">&#128203;</button>'+
         '</div></li>';
     }
     html+='</ul></div>';
@@ -1576,11 +1671,20 @@ function syncInputCaptureRoot(){
     collapseInputCapturePanel();
     return;
   }
+  const sel=document.getElementById('comp-sel');
+  const cid=sel?String(sel.value||'').trim():'';
+  const scoped=byComp(DATA.D,cid);
+  if(!scoped.length){
+    root.style.display='none';
+    root.setAttribute('aria-hidden','true');
+    collapseInputCapturePanel();
+    return;
+  }
   root.style.display='';
   root.removeAttribute('aria-hidden');
   if(meta){
-    const n=groupDRowsByInput(DATA.D).length;
-    meta.textContent='\u00b7 '+n+' input'+(n===1?'':'s')+' \u00b7 Table D';
+    const n=groupDRowsByInput(scoped).length;
+    meta.textContent='\u00b7 '+n+' key'+(n===1?'':'s')+' \u00b7 this component \u00b7 Table D';
   }
 }
 function allZero(rows,k){return rows.every(r=>(Number(r[k])||0)===0);}
@@ -1592,10 +1696,11 @@ const STAT_TIPS = {
   'Success Rate':  'Acked / (Acked + Failed + Dropped) using summed deltas over the window. N/A when no events were attempted &mdash; not the same as 100% success.',
   'Failed':        'Output-side delivery failures that will be retried. Non-zero = output is struggling but events are not yet lost. Summary value is the sum of FAILED deltas.',
   'Dropped':       'Events that exceeded the max retry count or were discarded. These are permanently lost. Summary value is the sum of DROPPED deltas.',
-  'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). Summary shows the mean OUT_ACTIVE gauge across intervals. If non-zero while ACKED=0 = output worker deadlock. Stays 0 during input-layer stalls.',
+  'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). Summary shows the mean OUT_ACTIVE gauge across intervals. If non-zero while ACKED=0 = output worker deadlock. Stays 0 during ingestion-layer (pre-pipeline) stalls.',
   'Lat P99':       'Each row is a lifetime write-latency reservoir snapshot (99th percentile), not a per-interval delta. The summary card shows the peak LAT_P99 across loaded intervals. Flat chart line = stalled beat, reservoir not updated. &gt;3s = elevated, &gt;10s = critical.',
   'Lat P999':      'Same reservoir semantics as Lat P99, 99.9th percentile. Summary shows the peak LAT_P999 across intervals. A large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates ES is hanging on a small fraction of bulk requests.',
-  'Queue Peak':    'Highest Q_PCT seen in the window (peak gauge). Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = inputs are silent, not that output is fast.',
+  'Queue Peak':    'Highest Q_PCT seen in the window (peak gauge). Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = upstream collection is quiet, not that output is fast.',
+  'Dataset (D)':   'From Table D: per&ndash;dataset key <code>processing_time</code> health (frozen histogram and P99). These keys come from <code>monitoring.dataset</code> in the logs &mdash; not the same as the Event flow &ldquo;ingestion buffer&rdquo; (FB_ACTIVE).',
   'Retries':       'pipeline.events.retry: summary is the sum of RETRY deltas over the window. Events re-entered the pipeline due to output failures. High retries + low drops = output struggling but recovering.',
   'RSS':           'Resident Set Size &mdash; OS physical memory. Card shows the latest sample; subtitle gives change from first to last row in the window. Sustained growth (&gt;50MB) may indicate a memory leak.',
   'Go Heap':       'max(MEM_ALLOC_MB) &minus; min(MEM_ALLOC_MB) in the window (heap swing from GC). Oscillation is normal; monotonic growth without release = potential leak.',
@@ -1604,7 +1709,7 @@ const STAT_TIPS = {
   'Version':       'Beat version string from the latest metrics row.',
   'Harvesters':    'HARV_RUNNING from the latest row. Gauge stays &gt;0 while files are open at EOF even when the writer is idle. HARV_RUNNING=0 with no throughput = reading stopped; sustained &gt;0 with zero pipeline publishes and zero acks = likely idle tail (see stall banner).',
   'Harvester FDs': 'HARV_FILES from the latest row. High value + stalled events = files held open but not producing (rotation or permission issue).',
-  'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk of silent failures when opening new files, log rotation, or new inputs.',
+  'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk of silent failures when opening new files, log rotation, or new file inputs.',
   'Registrar':     'Maximum REGISTRAR value seen in the window. &gt;100k tracked file states causes slow startup and memory pressure.',
   'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (ES rejected the event). Nonzero = network/TLS issue.',
   'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = ES sent a response the beat could not interpret.',
@@ -1861,7 +1966,7 @@ function flowPersistText(opts){
     ?'Strip values = <b>minimum</b> per series (calmest interval each gauge saw).'
     :'Strip values = <b>mean</b> per series across all '+ss+' samples.';
   const ackLine='Acked stays the <b>sum</b> over the window in every mode.';
-  const spreadHint=' <b>Spread (CV\u0304)</b> on the line under the roll-up averages relative variability (\u03c3/\u03bc) across the four backlog series where \u03bc&gt;0; hover that label for detail.';
+  const spreadHint=' <b>Backlog variability</b> (under the mode buttons): line 1 = CV = \u03c3/\u03bc, line 2 = mean \u03bc and s.d. \u03c3 in events, per layer, full window. Hover a column. Independent of Latest/Worst/Best/Mean. Acked is a window sum, not in this set.';
   if(isStalled&&idleTailPattern)
     return(flowMode==='latest'
       ?'Latest gauges at window end. '
@@ -1899,6 +2004,10 @@ function resetAll(){
   const g=document.getElementById('inp-ov-groups');if(g)g.innerHTML='';
   const fp=document.getElementById('flow-persist');if(fp)fp.innerHTML='';
   const fw=document.getElementById('flow-var-wrap');if(fw)fw.innerHTML='';
+  const flR=document.getElementById('flow-legend');
+  if(flR)flR.style.display='none';
+  const fRh=document.getElementById('flow-rollup-hint');
+  if(fRh){fRh.style.display='none';fRh.innerHTML='';fRh.setAttribute('aria-hidden','true');}
   setHdrStatus('no data loaded');
   syncComponentIdCopyUi('');
   document.getElementById('go-btn').disabled=true;
@@ -1920,8 +2029,13 @@ function showDashboard(){
     sel.appendChild(o);
   });
   sel.onchange=()=>renderComp(sel.value);
-  if(comps.length>0){sel.value=comps[0];renderComp(comps[0]);}
-  else{
+  if(comps.length>0){
+    sel.value=comps[0];
+    renderComp(comps[0]);
+    if((DATA.A||DATA.B||DATA.C) && !DATA.D)
+      mkAlert('info','No Table D (dataset key) data in this load',
+        'The diagnostic has no <code>monitoring.dataset</code> <code>processing_time</code> histograms, so there are no per&ndash;dataset key rows. Many beats / captures never emit this; other tables are unaffected. This is expected when the source omits it, not a parsing error.');
+  }else{
     document.getElementById('alerts').innerHTML='';
     mkAlert('warn','No component IDs found','Files may be empty or incorrectly formatted.');
     const mc=document.getElementById('m-comp');
@@ -1978,7 +2092,7 @@ function renderComp(cid){
   syncFlowModeSeg();
   const fr=pickFlowRollup(A,B,flowMode);
   const fbAct=fr.fbAct,outAct=fr.outAct,pipeAct=fr.pipeAct,qFill=fr.qFill,qMax=fr.qMax,qPct=fr.qPct;
-  const pooledCv=pooledCvAlpha(A,B);
+  const backlogCv=perSeriesBacklogStats(A,B);
   const flowNumDp=flowMode==='mean'?1:0;
 
   // STALL BANNER (deadlock / pipeline: same diagnosis as Issues list + event-flow blurb — hide banner to avoid duplicate)
@@ -2038,12 +2152,20 @@ function renderComp(cid){
   if(flowPersistEl)flowPersistEl.innerHTML=flowPersistText({isStalled,stallLayer,idleTailPattern,p:stallPersist,tier:stallTier,totAck,flowMode});
   if(A.length||B.length){
     fd.style.display='block';
-    if(flowVarEl){
-      const tip='Pooled relative spread: average of CV (\u03c3/\u03bc) over FB_ACTIVE, OUT_ACTIVE, PIPE_ACTIVE, and Q_FILLED wherever \u03bc>0. High % means those series swing widely vs their mean (bursty backlog); near 0 means steady levels or a flat line.';
-      if(pooledCv!=null)
-        flowVarEl.innerHTML='<abbr title="'+escAttr(tip)+'">Spread (CV\u0304)</abbr>: <strong>'+fmt(pooledCv*100,0)+'%</strong>';
-      else
-        flowVarEl.innerHTML='<abbr title="No series had a positive mean, so CV is undefined (often an all-quiet window).">Spread (CV\u0304)</abbr>: <strong>\u2014</strong>';
+    if(flowVarEl)flowVarEl.innerHTML=buildFlowVariabilityHtml(backlogCv);
+    const fl=document.getElementById('flow-legend');
+    const frh=document.getElementById('flow-rollup-hint');
+    if(fl)fl.style.display='block';
+    if(frh){
+      if(flowMode==='worst'){
+        frh.style.display='block';
+        frh.setAttribute('aria-hidden','false');
+        frh.innerHTML='<strong>Independent peaks</strong>: each number can be from a <em>different</em> 30s row. Use <code>Latest</code> or <strong>Event flow by layer</strong> to align in time.';
+      }else{
+        frh.setAttribute('aria-hidden','true');
+        frh.style.display='none';
+        frh.innerHTML='';
+      }
     }
     const row=document.getElementById('flow-row');
     function fv(n,t1,t2){const disp=flowNumDp?fmt(n,1):fmt(n);if(n===0)return{v:disp,c:'dim'};if(n>=t2)return{v:disp,c:'crit'};if(n>=t1)return{v:disp,c:'warn'};return{v:disp,c:'ok'};}
@@ -2058,15 +2180,35 @@ function renderComp(cid){
     const a3Cls=stallLayer==='deadlock'?'blocked':outAct>0?'flowing':'';
     const qPctStr=flowMode==='mean'?fmt(qPct*100,1):String(Math.round(qPct*100));
     const qSub=flowMode==='latest'?qPctStr+'% full':qPctStr+'% · '+flowMetricSub(flowMode,'q');
+    const a1L=a1Cls==='blocked'?'\u2716 blocked':a1Cls==='idle-tail'?'EOF idle':a1Cls==='flowing'?'Not input<br>stall':'';
+    const a2L=a2Cls==='blocked'?'\u2716 blocked':a2Cls==='flowing'?'Not pipeline<br>stall':'';
+    const a3L=a3Cls==='blocked'?'\u2716 ES not acking':a3Cls==='flowing'?'Not<br>deadlock':'';
+    const ar1=escAttr(flowLinkAria(1,a1Cls,!!idleTailPattern));
+    const ar2=escAttr(flowLinkAria(2,a2Cls,!!idleTailPattern));
+    const ar3=escAttr(flowLinkAria(3,a3Cls,!!idleTailPattern));
+    const subfb=flowMetricSub(flowMode,'fb');
+    const subo=flowMetricSub(flowMode,'out');
+    const ti=escAttr('Ingestion buffer, FB_ACTIVE ('+subfb+'). Box = gauge size vs fixed warn/crit bands; not the same meaning as link (stall) colors below.');
+    const tq=escAttr('Queue: Q_FILLED, '+qSub+'. Box = how full; does not by itself set link color (stall signature is separate).');
+    const to=escAttr('Out inflight, OUT_ACTIVE ('+subo+'). Box = gauge size vs fixed bands; not the same meaning as link (stall) colors below.');
+    const ta=escAttr('Acked: sum of counter deltas over this load window. Green = throughput, red = none in window (or idle/EOF if banner says so).');
     row.innerHTML=`
-      <div class="flow-node"><div class="fn-label">Input buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">${flowMetricSub(flowMode,'fb')}</div></div>
-      <div class="flow-arrow"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1Cls==='blocked'?'&#10006; blocked':a1Cls==='idle-tail'?'EOF idle':a1Cls==='flowing'?'&#10004;':''}</div></div>
-      <div class="flow-node"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${qSub}</div></div>
-      <div class="flow-arrow"><div class="fa-line ${a2Cls}"></div><div class="fa-label ${a2Cls}">${a2Cls==='blocked'?'&#10006; blocked':a2Cls==='flowing'?'&#10004;':''}</div></div>
-      <div class="flow-node"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">${flowMetricSub(flowMode,'out')}</div></div>
-      <div class="flow-arrow"><div class="fa-line ${a3Cls}"></div><div class="fa-label ${a3Cls}">${a3Cls==='blocked'?'&#10006; ES not acking':a3Cls==='flowing'?'&#10004;':''}</div></div>
-      <div class="flow-node"><div class="fn-label">Acked</div><div class="fn-val ${ackV.c}">${ackV.v}</div><div class="fn-sub">this window</div></div>`;
-  }else{fd.style.display='none';if(flowPersistEl)flowPersistEl.innerHTML='';if(flowVarEl)flowVarEl.innerHTML='';}
+      <div class="flow-node" title="${ti}"><div class="fn-label">Ingestion buffer</div><div class="fn-val ${fbV.c}">${fbV.v}</div><div class="fn-sub">${subfb}</div></div>
+      <div class="flow-arrow" role="img" title="${ar1}" aria-label="${ar1}"><div class="fa-line ${a1Cls}"></div><div class="fa-label ${a1Cls}">${a1L}</div></div>
+      <div class="flow-node" title="${tq}"><div class="fn-label">Queue</div><div class="fn-val ${qV.c}">${qV.v}</div><div class="fn-sub">${qSub}</div></div>
+      <div class="flow-arrow" role="img" title="${ar2}" aria-label="${ar2}"><div class="fa-line ${a2Cls}"></div><div class="fa-label ${a2Cls}">${a2L}</div></div>
+      <div class="flow-node" title="${to}"><div class="fn-label">Out inflight</div><div class="fn-val ${oV.c}">${oV.v}</div><div class="fn-sub">${subo}</div></div>
+      <div class="flow-arrow" role="img" title="${ar3}" aria-label="${ar3}"><div class="fa-line ${a3Cls}"></div><div class="fa-label ${a3Cls}">${a3L}</div></div>
+      <div class="flow-node" title="${ta}"><div class="fn-label">Acked</div><div class="fn-val ${ackV.c}">${ackV.v}</div><div class="fn-sub">this window</div></div>`;
+  }else{
+    fd.style.display='none';
+    if(flowPersistEl)flowPersistEl.innerHTML='';
+    if(flowVarEl)flowVarEl.innerHTML='';
+    const flx=document.getElementById('flow-legend');
+    if(flx)flx.style.display='none';
+    const frx=document.getElementById('flow-rollup-hint');
+    if(frx){frx.style.display='none';frx.innerHTML='';frx.setAttribute('aria-hidden','true');}
+  }
 
   // HEALTH GRID
   if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
@@ -2082,7 +2224,7 @@ function renderComp(cid){
   }
   if(D.length){
     const anyF=[...new Set(D.map(r=>r.INPUT_ID))].some(id=>{const cn=D.filter(r=>r.INPUT_ID===id).map(r=>Number(r.COUNT));return cn.length>5&&cn.every(c=>c===cn[0]);});
-    mkHealth(anyF?'&#128308;':'&#9989;','Inputs',anyF?'crit':'ok');
+    mkHealth(anyF?'&#128308;':'&#9989;','Dataset (D)',anyF?'crit':'ok');
   }
 
   // ALERTS
@@ -2177,7 +2319,7 @@ function renderComp(cid){
       warnAlerts.push(['warn','RSS grew +'+(rss[rss.length-1]-rss[0]).toFixed(0)+'MB over window',rss[0].toFixed(0)+'MB \u2192 '+rss[rss.length-1].toFixed(0)+'MB. Possible memory leak if sustained across restarts.']);
   }
 
-  // ── INPUT ISSUES ──────────────────────────────────────
+  // ── TABLE D (DATASET KEY) ISSUES ────────────────────
   if(D.length){
     const ids=[...new Set(D.map(r=>r.INPUT_ID))];
     const fh=[],fo=[],ho=[];
@@ -2190,11 +2332,11 @@ function renderComp(cid){
       else if(frzn)fo.push({iid,count:cn[0]});
       else if(p99>30000)ho.push({iid,p99});
     });
-    if(fh.length)critAlerts.push(['error',fh.length+' input(s) stalled with high processing latency',
-      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid)+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')';}).join('<br>')]);
-    if(fo.length)warnAlerts.push(['warn',fo.length+' input(s) stalled (histogram frozen)',
-      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid)+' (samples='+fmt(x.count)+')';}).join('<br>')]);
-    ho.forEach(x=>{const t=x.iid.length>32?escHtml(x.iid.slice(0,32)+'\u2026'):escHtml(x.iid);critAlerts.push(['error','Input P99='+fmtDurationMs(x.p99)+' \u2014 '+t,'Processing P99 exceeds 30\u00a0s. '+copyIdentBtnHtml(x.iid)]);});
+    if(fh.length)critAlerts.push(['error',fh.length+' dataset key(s) stalled with high processing latency',
+      'Sample count frozen AND P99 &gt; 30\u00a0s:<br>'+fh.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid,'dsk')+' (samples='+fmt(x.count)+', p99='+fmtDurationMs(x.p99)+')';}).join('<br>')]);
+    if(fo.length)warnAlerts.push(['warn',fo.length+' dataset key(s) stalled (histogram frozen)',
+      'Sample count unchanged on every loaded interval (no new processing-time observations):<br>'+fo.map(x=>{const t=x.iid.length>36?escHtml(x.iid.slice(0,36)+'\u2026'):escHtml(x.iid);return'&nbsp;&nbsp;\u2022 '+t+' '+copyIdentBtnHtml(x.iid,'dsk')+' (samples='+fmt(x.count)+')';}).join('<br>')]);
+    ho.forEach(x=>{const t=x.iid.length>32?escHtml(x.iid.slice(0,32)+'\u2026'):escHtml(x.iid);critAlerts.push(['error','Table D P99='+fmtDurationMs(x.p99)+' \u2014 '+t,'Codec / processing P99 exceeds 30\u00a0s. '+copyIdentBtnHtml(x.iid,'dsk')]);});
   }
 
   // ── POSITIVE SIGNALS (collapsed by default) ──────────
@@ -2239,7 +2381,7 @@ function renderComp(cid){
       if(maxPct > 0.9)
         critAlerts.push(['error','File descriptor exhaustion — '+Math.round(maxPct*100)+'% of soft limit used',
           'FD_OPEN is within 10% of FD_LIMIT. When exhausted the beat silently fails to open new files, stalling harvesters with no error message. '+
-          'Fix: increase ulimit -n or reduce open inputs. Max observed: FD_OPEN='+Math.max(...fdOpen)+', FD_LIMIT='+fdLimit[fdLimit.length-1]+'.']);
+          'Fix: increase ulimit -n or reduce the number of open file inputs. Max observed: FD_OPEN='+Math.max(...fdOpen)+', FD_LIMIT='+fdLimit[fdLimit.length-1]+'.']);
       else if(maxPct > 0.75)
         warnAlerts.push(['warn','File descriptors at '+Math.round(maxPct*100)+'% of soft limit','FD_OPEN/FD_LIMIT ratio approaching warning threshold. Monitor for growth.']);
     }
@@ -2291,7 +2433,7 @@ function renderComp(cid){
   if(B.length){
     beginStatSection('Pipeline & queue');
     const qp=(maxKey(B,'Q_PCT')*100).toFixed(0)+'%';
-    mkStat('Queue Peak',qp,(isStalled&&qp==='0%'?'empty (inputs stalled)':'peak: max Q_PCT in window'),parseFloat(qp)>=100?'crit':parseFloat(qp)>=80?'warn':'',isStalled&&qp==='0%'?'si':'',isStalled&&qp==='0%'?{cls:'stall',text:'STALL'}:null);
+    mkStat('Queue Peak',qp,(isStalled&&qp==='0%'?'empty (ingestion stall)':'peak: max Q_PCT in window'),parseFloat(qp)>=100?'crit':parseFloat(qp)>=80?'warn':'',isStalled&&qp==='0%'?'si':'',isStalled&&qp==='0%'?{cls:'stall',text:'STALL'}:null);
     mkStat('Retries',fmt(sumKey(B,'RETRY')),'sum: RETRY deltas',sumKey(B,'RETRY')>0?'warn':'');
   }
   if(C.length){
@@ -2389,7 +2531,7 @@ function renderComp(cid){
     const layerXOpts={xTimestamps:layerTs,xRangeTitle:layerRange,xAxisTickCount:18};
     const ds=[];
     if(A.length)
-      ds.push({label:'FB_ACTIVE (input buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.12)',fill:true});
+      ds.push({label:'FB_ACTIVE (ingestion buffer)',data:A.map(r=>Number(r.FB_ACTIVE)||0),borderColor:'#00c875',backgroundColor:'rgba(0,200,117,.12)',fill:true});
     if(B.length)
       ds.push({
         label:'PIPE_ACTIVE (pipeline)',
@@ -2468,7 +2610,7 @@ function renderComp(cid){
     ],null,{yFormat:'compactNum',...lineChartXOpts});
   }
 
-  // INPUT TABLE — D is scoped by selected component; extractor only emits inputs with histogram.count>0 (see elastic-agent-perf.sh)
+  // Table D — scoped by selected component; extractor only emits dataset keys with histogram.count>0 (see elastic-agent-perf.sh)
   const inpSec=document.getElementById('sec-inp');
   const inpBody=document.getElementById('inp-body');
   const inpHint=document.getElementById('inp-empty-hint');
@@ -2499,7 +2641,7 @@ function renderComp(cid){
       const p99s=Number(r.P99_ms)>10000?'color:var(--err);':'';
       const maxs=Number(r.MAX_ms)>30000?'color:var(--crit);':'';
       tr.innerHTML='<td class="td-inp-id" title="'+escAttr(id)+'">'+
-        '<span class="td-inp-id-txt" style="color:var(--text)">'+escHtml(sid)+'</span>'+copyIdentBtnHtml(id,'input')+'</td>'+
+        '<span class="td-inp-id-txt" style="color:var(--text)">'+escHtml(sid)+'</span>'+copyIdentBtnHtml(id,'dsk')+'</td>'+
         '<td class="num" title="histogram.count = '+cnt+' (exact)">'+fmt(cnt)+'</td>'+
         inpTdDur(r.MEAN_ms,'')+inpTdDur(r.MEDIAN_ms,'')+
         inpTdDur(r.P95_ms,p95s)+inpTdDur(r.P99_ms,p99s)+inpTdDur(r.MAX_ms,maxs)+
@@ -2518,15 +2660,16 @@ function renderComp(cid){
       const compsWithD=new Set(DATA.D.map(r=>String(r.COMPONENT_ID||'').trim()));
       const hasOther=[...compsWithD].some(c=>c!==cTab);
       inpEmptyText.innerHTML=hasOther
-        ?'Table D is scoped to the <b>selected component</b> (Component dropdown above). This component has no per-input rows, but other component IDs do appear in <code>D-input-processing.tsv</code> &mdash; choose another component to see its charts and table.'
-        :'The extractor (<code>elastic-agent-perf.sh</code>, Table D) only writes rows when <code>monitoring.dataset.&lt;input&gt;.processing_time.histogram.count &gt; 0</code> in the diagnostic NDJSON. Inputs that were idle for the whole capture, or integrations that do not publish this histogram, never appear. If you expected multiple inputs on <i>this</i> component, only the ones that actually processed events during the window are listed.';
+        ?'Table D is scoped to the <b>selected component</b> (Component dropdown above). This component has no dataset key rows, but other component IDs do appear in <code>D-input-processing.tsv</code> &mdash; choose another component to see its charts and table.'
+        :'The extractor (<code>elastic-agent-perf.sh</code>, Table D) only writes rows when <code>monitoring.dataset.&lt;key&gt;.processing_time.histogram.count &gt; 0</code> in the diagnostic NDJSON. Keys that were idle for the whole capture, or beats that do not publish this histogram, never appear. If you expected multiple keys on <i>this</i> component, only those with new observations in the window are listed.';
     }else{
       inpSec.style.display='none';
       inpHint.style.display='none';
     }
   }
   syncInputCaptureRoot();
-  if(isInputCapturePanelOpen())renderInputStatusOverview(DATA.D,document.getElementById('comp-sel').value);
+  const _cs=document.getElementById('comp-sel');
+  renderInputStatusOverview(DATA.D,_cs?_cs.value:'');
 }
 
 (function(){
@@ -2554,8 +2697,10 @@ function renderComp(cid){
         capBody.removeAttribute('hidden');
         capRoot.classList.add('open');
         capTgl.setAttribute('aria-expanded','true');
-        if(DATA.D&&DATA.D.length)
-          renderInputStatusOverview(DATA.D,document.getElementById('comp-sel').value);
+        {const c=document.getElementById('comp-sel');
+        if(DATA.D&&c&&byComp(DATA.D,c.value).length)
+          renderInputStatusOverview(DATA.D,c.value);
+        }
       }else{
         capBody.setAttribute('hidden','');
         capRoot.classList.remove('open');
