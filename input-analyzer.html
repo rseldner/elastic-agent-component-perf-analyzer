@@ -233,6 +233,59 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 [data-theme="light"] .fa-line.flowing{opacity:0.92}
 .flow-viz-wrap{margin:14px 0 0;border-top:1px solid var(--bdr2);padding-top:12px}
 .flow-viz-hd{margin-bottom:6px;align-items:center}
+#flow-viz-zoom.flow-viz-zoom{
+  display:none;flex-wrap:wrap;align-items:center;gap:6px 12px;justify-content:flex-end;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);
+  max-width:100%;min-width:0;margin-left:auto
+}
+#flow-viz-zoom.flow-viz-zoom.fvz-on{display:flex}
+.flow-viz-zoom .fvz-txt{white-space:nowrap}
+.flow-viz-zoom input.fvz-in{
+  width:4.25rem;min-width:0;box-sizing:border-box;padding:4px 6px;
+  font-family:inherit;font-size:10px;background:var(--surf2);border:1px solid var(--bdr2);
+  border-radius:5px;color:var(--text)
+}
+.flow-viz-zoom .fvz-in:focus{outline:2px solid var(--focus-ring);border-color:var(--accent)}
+.flow-viz-zoom .fvz-of{opacity:0.85}
+.flow-viz-zoom .flow-mode-seg button{padding:4px 8px}
+#flow-viz-brush{
+  display:none;
+  margin:2px 0 8px;max-width:100%;min-width:0;box-sizing:border-box
+}
+#flow-viz-brush.fvz-on{display:block}
+.flow-viz-brush-lab{
+  font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 5px;line-height:1.35;max-width:100%
+}
+.flow-viz-brush-hint{
+  font-weight:400;letter-spacing:0.02em;text-transform:none;opacity:0.85;font-size:9px
+}
+.flow-viz-brush-track{
+  position:relative;width:100%;min-width:0;height:24px;box-sizing:border-box;
+  border-radius:5px;background:var(--bdr2);
+  box-shadow:0 0 0 1px var(--bdr) inset;
+  cursor:col-resize;touch-action:none;
+  -webkit-user-select:none;user-select:none
+}
+.flow-viz-brush-sel{
+  position:absolute;left:0;top:0;bottom:0;box-sizing:border-box;width:0;
+  display:none;
+  background:rgba(0,153,204,0.16);
+  box-shadow:0 0 0 1px rgba(0,212,255,0.38) inset,0 0 12px rgba(0,212,255,0.07);
+  border-radius:3px;pointer-events:none;transition:background 0.08s ease,box-shadow 0.08s ease
+}
+#flow-viz-brush .flow-viz-brush-sel.is-preview{
+  background:rgba(0,153,204,0.22);
+  box-shadow:0 0 0 1px rgba(0,212,255,0.55) inset,0 0 14px rgba(0,212,255,0.12)
+}
+[data-theme="light"] .flow-viz-brush-sel{
+  background:rgba(0,124,170,0.12);
+  box-shadow:0 0 0 1px rgba(0,124,170,0.28) inset
+}
+[data-theme="light"] #flow-viz-brush .flow-viz-brush-sel.is-preview{
+  background:rgba(0,124,170,0.2);
+  box-shadow:0 0 0 1px rgba(0,100,150,0.4) inset
+}
 .flow-viz-persist{
   font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);line-height:1.45;margin:0 0 8px;max-width:90ch
 }
@@ -590,10 +643,26 @@ table.itbl tr:hover td{background:var(--surf2)}
     <div class="flow-viz-wrap" id="flow-viz-wrap" style="display:none" aria-label="Pipeline by time in this window">
       <div class="flow-hd-row flow-viz-hd">
         <div class="flow-title">By time in window</div>
+        <div class="flow-viz-zoom" id="flow-viz-zoom" aria-label="View a subset of 30 s intervals">
+          <span class="fvz-txt" title="1 = first 30 s row in the loaded window">Interval #</span>
+          <input type="number" class="fvz-in" id="flow-viz-zi0" min="1" value="1" step="1" inputmode="numeric" title="Start interval (1 = first)"/>
+          <span class="fvz-txt">&ndash;</span>
+          <input type="number" class="fvz-in" id="flow-viz-zi1" min="1" value="1" step="1" inputmode="numeric" title="End interval (inclusive)"/>
+          <span class="fvz-txt fvz-of" id="flow-viz-zeof" aria-hidden="true"></span>
+          <div class="flow-mode-seg" role="group" aria-label="Zoom">
+            <button type="button" id="flow-viz-reset" title="Show all 30 s intervals in the load window">Full window</button>
+          </div>
+        </div>
       </div>
       <p class="flow-viz-persist" id="flow-viz-persist" aria-hidden="true"></p>
       <div id="flow-viz-spark">
         <div class="flow-state-strip" id="flow-state-strip" style="display:none" role="img" aria-label=""></div>
+        <div class="flow-viz-brush" id="flow-viz-brush" aria-label="Time range">
+          <div class="flow-viz-brush-lab" id="flow-viz-brush-lab">Time range <span class="flow-viz-brush-hint">(drag; double&#8209;click = full window)</span></div>
+          <div class="flow-viz-brush-track" id="flow-viz-brush-track" role="presentation" title="Click and drag: set interval range. Double-click: show full load window.">
+            <div class="flow-viz-brush-sel" id="flow-viz-brush-sel" aria-hidden="true"></div>
+          </div>
+        </div>
         <div class="flow-state-legend" id="flow-state-legend" style="display:none" aria-label="State strip key" aria-hidden="true"></div>
         <div class="chart-flow-spark-h"><canvas id="ch-flow-spark" height="120"></canvas></div>
       </div>
@@ -1599,6 +1668,205 @@ const STATE_H_LEG=[['flowing','Flowing'],['deadlock','Deadlock'],['pipeline','Pi
 const STATE_PRI={deadlock:6,pipeline:5,input:4,trickle:3,flowing:2,idletail:1,idle:0};
 const STALL_SET=new Set(['deadlock','pipeline','input']);
 let _flowVizIdleTail=false;
+/** Aligned 30s rows (component scope) for By time in window; reset when the panel reloads. */
+let _flowVizA=null,_flowVizB=null,_flowVizXTip=null;
+let _flowVizIdleT=false;
+let _flowVizN=0;
+/** Inclusive indices into the aligned [0, N) window (same as A/B index when both exist). */
+let _flowVizI0=0,_flowVizI1=0;
+let _flowVizTimeControlsWired=false;
+let _flowVizBrushInDrag=false;
+let _flowVizBrushAnc=0;
+function flowVizBrushXToIndex(clientX, track){
+  if(!track) return 0;
+  const r=track.getBoundingClientRect();
+  if(r.width<=0) return 0;
+  const n=_flowVizN;
+  if(n<2) return 0;
+  const t=Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  return Math.min(n - 1, Math.max(0, Math.floor(t * n)));
+}
+function flowVizBrushSetSel(i0, i1, n, isPreview){
+  const el=document.getElementById('flow-viz-brush-sel');
+  if(!el) return;
+  if(!n || n < 2){
+    el.style.display='none';
+    return;
+  }
+  const lo=Math.max(0, Math.min(i0, n - 1));
+  const hi=Math.max(0, Math.min(i1, n - 1));
+  const a=Math.min(lo, hi), b=Math.max(lo, hi);
+  el.style.display='block';
+  el.style.left=(a / n) * 100 + '%';
+  el.style.width=((b - a + 1) / n) * 100 + '%';
+  el.classList.toggle('is-preview', !!isPreview);
+}
+/** Inclusive 0-based indices. No-op re-render if unchanged. */
+function applyFlowVizRange0(p0, p1){
+  if(_flowVizN < 1) return;
+  const n=_flowVizN;
+  const a=Math.max(0, Math.min(n - 1, p0));
+  const b=Math.max(0, Math.min(n - 1, p1));
+  const lo=Math.min(a, b), hi=Math.max(a, b);
+  if(lo === _flowVizI0 && hi === _flowVizI1){
+    syncFlowVizZoomBar();
+    return;
+  }
+  _flowVizI0=lo; _flowVizI1=hi;
+  renderFlowVizTimeWindow();
+}
+function flowVizAlignedCount(A,B){
+  const a=A||[],b=B||[];
+  if(!a.length&&!b.length) return 0;
+  return mergeLayerSeries(a,b).ts.length;
+}
+function sliceFlowVizAB(A,B,i0,i1){
+  const a=A||[],b=B||[];
+  if(!a.length&&!b.length) return{a:[],b:[]};
+  if(a.length&&!b.length) return{a:a.slice(i0,i1+1),b:[]};
+  if(!a.length&&b.length) return{a:[],b:b.slice(i0,i1+1)};
+  const n=Math.min(a.length,b.length);
+  const c0=Math.max(0,Math.min(i0,n-1)),c1=Math.max(0,Math.min(i1,n-1));
+  const lo=Math.min(c0,c1),hi=Math.max(c0,c1);
+  return{a:a.slice(lo,hi+1),b:b.slice(lo,hi+1)};
+}
+function flowVizUpdatePersistText(sPersist,xRangeDashForTip,sliceFirst,sliceLast,fullN,isZoomed){
+  if(!sPersist) return;
+  sPersist.style.display='block';
+  sPersist.setAttribute('aria-hidden','false');
+  let t='Per-interval <strong>health</strong> (state strip) uses ACK step and the same stall/idle heuristics as the banner. The <strong>multiband</strong> chart is the four in-flight series on the same 30&thinsp;s index.';
+  if(isZoomed&&fullN>0) t+=' <strong>Zoom:</strong> showing a subset; strip buckets use only visible intervals, so <em>Mixed (outliers)</em> is less common.';
+  t+=xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'';
+  if(isZoomed&&fullN>0) t+=' <span class="fvs" style="opacity:0.85">View: '+escHtml(xAxisRangeTitle(sliceFirst,sliceLast))+' ('+(_flowVizI0+1)+'\u2013'+(_flowVizI1+1)+' of '+fullN+')</span>';
+  sPersist.innerHTML=t;
+}
+function syncFlowVizZoomBar(){
+  const z=document.getElementById('flow-viz-zoom');
+  const b=document.getElementById('flow-viz-brush');
+  if(!z) return;
+  if(_flowVizN<2){
+    z.classList.remove('fvz-on');
+    if(b) b.classList.remove('fvz-on');
+    return;
+  }
+  z.classList.add('fvz-on');
+  if(b) b.classList.add('fvz-on');
+  if(!_flowVizBrushInDrag) flowVizBrushSetSel(_flowVizI0, _flowVizI1, _flowVizN, false);
+  const i0El=document.getElementById('flow-viz-zi0'),i1El=document.getElementById('flow-viz-zi1'),ofEl=document.getElementById('flow-viz-zeof');
+  if(i0El){i0El.min=1;i0El.max=String(_flowVizN);i0El.value=String(_flowVizI0+1);}
+  if(i1El){i1El.min=1;i1El.max=String(_flowVizN);i1El.value=String(_flowVizI1+1);}
+  if(ofEl) ofEl.textContent=' of '+_flowVizN+'.';
+}
+function renderFlowVizTimeWindow(){
+  const A=_flowVizA||[],B=_flowVizB||[],idleT=!!_flowVizIdleT;
+  const w=document.getElementById('flow-viz-wrap');
+  const sSpark=document.getElementById('flow-viz-spark');
+  const sPersist=document.getElementById('flow-viz-persist');
+  if(!w||!sSpark) return;
+  if(!A.length&&!B.length) return;
+  const n=flowVizAlignedCount(A,B);
+  if(n<1) return;
+  const i0=Math.max(0,Math.min(_flowVizI0,n-1)),i1=Math.max(0,Math.min(_flowVizI1,n-1));
+  const a0=Math.min(i0,i1),a1=Math.max(i0,i1);
+  _flowVizI0=a0;_flowVizI1=a1;
+  const{ a: As, b: Bs }=sliceFlowVizAB(A,B,a0,a1);
+  const m=mergeLayerSeries(As,Bs);
+  _buildStateStrip(m,As,Bs,idleT);
+  const mFull=mergeLayerSeries(A,B);
+  const tsF=mFull.ts,fb=tsF[0]||'',fL=tsF[tsF.length-1]||'';
+  const isZoomed=a0>0||a1<tsF.length-1;
+  if(sPersist) flowVizUpdatePersistText(sPersist,_flowVizXTip, m.ts[0]||fb, m.ts[m.ts.length-1]||fL,tsF.length,isZoomed);
+  if(!m.ts.length){
+    if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
+    syncFlowVizZoomBar();
+    return;
+  }
+  if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
+  const layerLab=chartPlaceholderLabels(m.ts.length);
+  const layerRange=xAxisRangeTitle(m.ts[0],m.ts[m.ts.length-1]);
+  const lineChartXOpts={xTimestamps:m.ts,xRangeTitle:layerRange,xAxisTickCount:20};
+  const dss=[];
+  if(m.fb.length)dss.push({label:'Ingest (FB_ACTIVE)', data:m.fb, borderColor:FLOW_LAY_C[0], backgroundColor:'rgba(0,200,117,.08)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.pipe.length)dss.push({label:'Pipe (PIPE_ACTIVE)', data:m.pipe, borderColor:FLOW_LAY_C[1], backgroundColor:'rgba(0,212,255,.06)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.q.length)dss.push({label:'Queue (Q_FILLED)', data:m.q, borderColor:FLOW_LAY_C[2], backgroundColor:'rgba(255,184,48,.07)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.out.length)dss.push({label:'Out (OUT_ACTIVE)', data:m.out, borderColor:FLOW_LAY_C[3], backgroundColor:'rgba(255,45,85,.08)', fill: true, borderWidth: 1, pointRadius:0});
+  mkLine('ch-flow-spark', layerLab, dss, null, { maintainAspectRatio: false, yFormat: 'compactNum', xAxisTickCount: 20, ...lineChartXOpts });
+  syncFlowVizZoomBar();
+}
+function applyFlowVizZoomFromInputs(){
+  if(_flowVizN<1) return;
+  const i0E=document.getElementById('flow-viz-zi0'),i1E=document.getElementById('flow-viz-zi1');
+  if(!i0E||!i1E) return;
+  let a=parseInt(i0E.value,10),b=parseInt(i1E.value,10);
+  if(isNaN(a)||a<1) a=1;
+  if(isNaN(b)||b<1) b=1;
+  if(a>_flowVizN) a=_flowVizN;
+  if(b>_flowVizN) b=_flowVizN;
+  applyFlowVizRange0(a-1, b-1);
+}
+function flowVizBrushEndDrag(tr, e){
+  if(!_flowVizBrushInDrag) return;
+  e.preventDefault();
+  _flowVizBrushInDrag=false;
+  try{ tr.releasePointerCapture(e.pointerId); } catch(x) {}
+  if(_flowVizN<2) return;
+  const cur=flowVizBrushXToIndex(e.clientX, tr);
+  const a=Math.min(_flowVizBrushAnc, cur), b=Math.max(_flowVizBrushAnc, cur);
+  applyFlowVizRange0(a, b);
+}
+function initFlowVizZoomOnce(){
+  if(_flowVizTimeControlsWired) return;
+  const r=document.getElementById('flow-viz-reset');
+  const i0E=document.getElementById('flow-viz-zi0'),i1E=document.getElementById('flow-viz-zi1');
+  if(r) r.addEventListener('click',function(e){ e.preventDefault(); if(_flowVizN<1) return; applyFlowVizRange0(0, Math.max(0, _flowVizN-1)); });
+  if(i0E) i0E.addEventListener('change', function(){ applyFlowVizZoomFromInputs(); });
+  if(i1E) i1E.addEventListener('change', function(){ applyFlowVizZoomFromInputs(); });
+  if(i0E) i0E.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); applyFlowVizZoomFromInputs(); }});
+  if(i1E) i1E.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); applyFlowVizZoomFromInputs(); }});
+  const tr=document.getElementById('flow-viz-brush-track');
+  if(tr){
+    tr.addEventListener('pointerdown', function(e){
+      if(e.button !== 0) return;
+      if(_flowVizN < 2) return;
+      e.preventDefault();
+      _flowVizBrushAnc=flowVizBrushXToIndex(e.clientX, tr);
+      _flowVizBrushInDrag=true;
+      try{ tr.setPointerCapture(e.pointerId); } catch(x) {}
+      flowVizBrushSetSel(_flowVizBrushAnc, _flowVizBrushAnc, _flowVizN, true);
+    });
+    tr.addEventListener('pointermove', function(e){
+      if(!_flowVizBrushInDrag) return;
+      e.preventDefault();
+      const cur=flowVizBrushXToIndex(e.clientX, tr);
+      const a=Math.min(_flowVizBrushAnc, cur), b=Math.max(_flowVizBrushAnc, cur);
+      flowVizBrushSetSel(a, b, _flowVizN, true);
+    });
+    tr.addEventListener('pointerup', function(e){
+      if(e.button !== 0) return;
+      flowVizBrushEndDrag(tr, e);
+    });
+    tr.addEventListener('pointercancel', function(e){
+      e.preventDefault();
+      if(!_flowVizBrushInDrag) return;
+      _flowVizBrushInDrag=false;
+      try{ tr.releasePointerCapture(e.pointerId); } catch(x) {}
+      syncFlowVizZoomBar();
+    });
+    tr.addEventListener('lostpointercapture', function(){
+      if(_flowVizBrushInDrag){
+        _flowVizBrushInDrag=false;
+        syncFlowVizZoomBar();
+      }
+    });
+    tr.addEventListener('dblclick', function(e){
+      e.preventDefault();
+      if(_flowVizN < 2) return;
+      if(_flowVizBrushInDrag) _flowVizBrushInDrag=false;
+      applyFlowVizRange0(0, Math.max(0, _flowVizN-1));
+    });
+  }
+  _flowVizTimeControlsWired=true;
+}
 function abRowAtIndex(A,B,i){
   if(!A.length && !B.length) return{ a: {}, b: {} };
   if(A.length && !B.length) return{ a: A[i], b: { PIPE_ACTIVE:0, Q_PCT:0, Q_FILLED:0, TIMESTAMP: A[i]&&A[i].TIMESTAMP } };
@@ -1792,9 +2060,14 @@ function updateFlowVizPanels(A, B, xRangeDashForTip, idleTailArg){
   const w=document.getElementById('flow-viz-wrap');
   const sSpark=document.getElementById('flow-viz-spark');
   const sPersist=document.getElementById('flow-viz-persist');
+  const zBar=document.getElementById('flow-viz-zoom');
+  const fvb=document.getElementById('flow-viz-brush');
   if(!w||!sSpark) return;
   if(!A.length && !B.length){
     w.style.display='none';
+    _flowVizA=_flowVizB=null; _flowVizXTip=null; _flowVizN=0;
+    if(zBar) zBar.classList.remove('fvz-on');
+    if(fvb) fvb.classList.remove('fvz-on');
     if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
     if(sPersist){sPersist.style.display='none';sPersist.innerHTML='';}
     const sst=document.getElementById('flow-state-strip');
@@ -1803,26 +2076,14 @@ function updateFlowVizPanels(A, B, xRangeDashForTip, idleTailArg){
     if(sleg){sleg.style.display='none';sleg.innerHTML='';}
     return;
   }
+  _flowVizA=A; _flowVizB=B; _flowVizXTip=xRangeDashForTip; _flowVizIdleT=idleT;
+  const n=flowVizAlignedCount(A,B);
+  _flowVizN=n;
+  _flowVizI0=0;
+  _flowVizI1=Math.max(0,n-1);
   w.style.display='block';
-  const m=mergeLayerSeries(A,B);
-  _buildStateStrip(m, A, B, idleT);
-  if(sPersist){
-    sPersist.style.display='block';
-    sPersist.setAttribute('aria-hidden','false');
-    sPersist.innerHTML='Per-interval <strong>health</strong> (state strip) uses ACK step and the same stall/idle heuristics as the banner. The <strong>multiband</strong> chart is the four in-flight series on the same 30&thinsp;s index.'+
-      (xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'');
-  }
-  if(!m.ts.length) return;
-  if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
-  const layerLab=chartPlaceholderLabels(m.ts.length);
-  const layerRange=xAxisRangeTitle(m.ts[0],m.ts[m.ts.length-1]);
-  const lineChartXOpts={xTimestamps:m.ts,xRangeTitle:layerRange,xAxisTickCount:20};
-  const dss=[];
-  if(m.fb.length)dss.push({label:'Ingest (FB_ACTIVE)', data:m.fb, borderColor:FLOW_LAY_C[0], backgroundColor:'rgba(0,200,117,.08)', fill: true, borderWidth: 1, pointRadius:0});
-  if(m.pipe.length)dss.push({label:'Pipe (PIPE_ACTIVE)', data:m.pipe, borderColor:FLOW_LAY_C[1], backgroundColor:'rgba(0,212,255,.06)', fill: true, borderWidth: 1, pointRadius:0});
-  if(m.q.length)dss.push({label:'Queue (Q_FILLED)', data:m.q, borderColor:FLOW_LAY_C[2], backgroundColor:'rgba(255,184,48,.07)', fill: true, borderWidth: 1, pointRadius:0});
-  if(m.out.length)dss.push({label:'Out (OUT_ACTIVE)', data:m.out, borderColor:FLOW_LAY_C[3], backgroundColor:'rgba(255,45,85,.08)', fill: true, borderWidth: 1, pointRadius:0});
-  mkLine('ch-flow-spark', layerLab, dss, null, { maintainAspectRatio: false, yFormat: 'compactNum', xAxisTickCount: 20, ...lineChartXOpts });
+  initFlowVizZoomOnce();
+  renderFlowVizTimeWindow();
 }
 function byComp(rows,cid){if(!rows||!cid)return[];const c=String(cid).trim();return rows.filter(r=>String(r.COMPONENT_ID||'').trim()===c);}
 /** Latest-interval dataset key processing status; same rules as the per-component table. */
@@ -2257,6 +2518,11 @@ function resetAll(){
   const flg=document.getElementById('flow-legend');if(flg){flg.textContent='';flg.setAttribute('aria-hidden','true');}
   const fvw=document.getElementById('flow-viz-wrap');
   if(fvw){fvw.style.display='none';}
+  const fvz=document.getElementById('flow-viz-zoom');
+  if(fvz) fvz.classList.remove('fvz-on');
+  const fvbR=document.getElementById('flow-viz-brush');
+  if(fvbR) fvbR.classList.remove('fvz-on');
+  _flowVizA=_flowVizB=null; _flowVizXTip=null; _flowVizN=0;
   const fvs=document.getElementById('flow-viz-spark');
   if(fvs){
     const fss=document.getElementById('flow-state-strip');
