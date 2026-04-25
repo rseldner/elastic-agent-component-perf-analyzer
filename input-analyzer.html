@@ -1621,7 +1621,7 @@ function layerChartHelpHtml(){
   '<div class="lht">How we infer where a stall is</div>'+
   '<ul>'+
   '<li><strong>Cross-read the lines</strong> at the same time index: whichever layer stays high while throughput (ACKED) is flat at zero usually owns the bottleneck.</li>'+
-  '<li><strong>Use the queue chart</strong> (Q_FILLED / Q_PCT) below: a full queue with OUT_ACTIVE high often points to output or ES; a full queue with OUT_ACTIVE near zero points to pipeline not draining into the output worker.</li>'+
+  '<li><strong>Use the queue chart</strong> (Q_FILLED / Q_PCT) below: a full queue with OUT_ACTIVE high often points to the output path (destination slow or not acknowledging); a full queue with OUT_ACTIVE near zero points to pipeline not draining into the output worker.</li>'+
   '<li><strong>Match the stall banner / Issues list</strong>: this chart is the visual counterpart to those classifications.</li>'+
   '</ul>'+
   '<div class="lht">Typical shapes (zero throughput)</div>'+
@@ -1689,7 +1689,7 @@ function flowLinkAria(leg, cls, idleTailPattern, stallLayer){
     return'Queue to out inflight: no pipeline in-flight in this roll-up; neutral line.';
   }
   if(leg===3){
-    if(cls==='blocked') return'Out inflight to output: output / ack stall (see banner), e.g. ES not acking.';
+    if(cls==='blocked') return'Out inflight to output: output / ack stall (see banner), e.g. destination not acknowledging.';
     if(cls==='flowing'){
       if(stallLayer) return'Out to destination: not the output/deadlock stall class on this leg in the window-level diagnosis (see banner).';
       return'Out to destination: in this roll-up, no window-level output/deadlock; use the state strip for per-interval health.';
@@ -2259,13 +2259,13 @@ function isFlatLine(rows,k){if(!rows.length)return false;const f=Number(rows[0][
 
 // STAT CARD TOOLTIPS
 const STAT_TIPS = {
-  'Total Acked':   'Events successfully delivered to and acknowledged by the output (ES/Logstash). Each row is a 30s counter delta; the summary card sums those deltas over the loaded window. Zero = nothing shipped during this entire window.',
+  'Total Acked':   'Events successfully delivered to and acknowledged by the output destination (e.g. Elasticsearch, Logstash, Kafka). Each row is a 30s counter delta; the summary card sums those deltas over the loaded window. Zero = nothing shipped during this entire window.',
   'Success Rate':  'Acked / (Acked + Failed + Dropped) using summed deltas over the window. N/A when no events were attempted &mdash; not the same as 100% success.',
   'Failed':        'Output-side delivery failures that will be retried. Non-zero = output is struggling but events are not yet lost. Summary value is the sum of FAILED deltas.',
   'Dropped':       'Events that exceeded the max retry count or were discarded. These are permanently lost. Summary value is the sum of DROPPED deltas.',
   'OUT_ACTIVE':    'Events currently in-flight to the output worker (post-queue, pre-ack). Summary shows the mean OUT_ACTIVE gauge across intervals. If non-zero while ACKED=0 = output worker deadlock. Stays 0 during ingestion-layer (pre-pipeline) stalls.',
   'Lat P99':       'Each row is a lifetime write-latency reservoir snapshot (99th percentile), not a per-interval delta. The summary card shows the peak LAT_P99 across loaded intervals. Flat chart line = stalled beat, reservoir not updated. &gt;3s = elevated, &gt;10s = critical.',
-  'Lat P999':      'Same reservoir semantics as Lat P99, 99.9th percentile. Summary shows the peak LAT_P999 across intervals. A large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates ES is hanging on a small fraction of bulk requests.',
+  'Lat P999':      'Same reservoir semantics as Lat P99, 99.9th percentile. Summary shows the peak LAT_P999 across intervals. A large gap between P99 and P999 (e.g. P99=1.5s, P999=13.9s) indicates the destination is slow on a small fraction of write/bulk requests.',
   'Queue Peak':    'Highest Q_PCT seen in the window (peak gauge). Q_PCT=1.0 = queue 100% full = output bottleneck. 0% during a stall = upstream collection is quiet, not that output is fast.',
   'Dataset (D)':   'From Table D: per&ndash;dataset key <code>processing_time</code> health (frozen histogram and P99). These keys come from <code>monitoring.dataset</code> in the logs &mdash; not the same as the Event flow &ldquo;ingestion buffer&rdquo; (FB_ACTIVE).',
   'Retries':       'pipeline.events.retry: summary is the sum of RETRY deltas over the window. Events re-entered the pipeline due to output failures. High retries + low drops = output struggling but recovering.',
@@ -2278,8 +2278,8 @@ const STAT_TIPS = {
   'Harvester FDs': 'HARV_FILES from the latest row (when reported). High value + stalled events = files held open but not producing (rotation/permission issue).',
   'FD Usage':      'Latest FD_OPEN as a percentage of FD_LIMIT. &gt;90% = risk opening new process resources (files/sockets/endpoints) fails; impact depends on component type.',
   'Registrar':     'Maximum REGISTRAR value seen in the window. &gt;100k tracked file states causes slow startup and memory pressure.',
-  'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (ES rejected the event). Nonzero = network/TLS issue.',
-  'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = ES sent a response the beat could not interpret.',
+  'WRITE_ERR':     'Transport-level write errors (TLS handshake failures, connection resets, TCP timeouts). Distinct from FAILED (output rejected the event at the protocol/application layer). Nonzero = network/TLS issue.',
+  'READ_ERR':      'Errors reading the output response (response parse failures, unexpected disconnects). Nonzero = the destination sent a response the beat could not interpret.',
 };
 
 function mkAlert(level,title,body,container){
@@ -2748,7 +2748,7 @@ function renderComp(cid){
     const qSub=flowMode==='latest'?qPctStr+'% full':qPctStr+'% · '+flowMetricSub(flowMode,'q');
     const a1L=a1Cls==='blocked'?'\u2716 blocked':a1Cls==='idle-tail'?'EOF idle':(a1Cls==='flowing'&&stallLayer)?'Not input<br>stall':'';
     const a2L=a2Cls==='blocked'?'\u2716 blocked':(a2Cls==='flowing'&&stallLayer)?'Not pipeline<br>stall':'';
-    const a3L=a3Cls==='blocked'?'\u2716 ES not acking':(a3Cls==='flowing'&&stallLayer)?'Not<br>deadlock':'';
+    const a3L=a3Cls==='blocked'?'\u2716 not<br>acked':(a3Cls==='flowing'&&stallLayer)?'Not<br>deadlock':'';
     const ar1=escAttr(flowLinkAria(1,a1Cls,!!idleTailPattern,stallLayer));
     const ar2=escAttr(flowLinkAria(2,a2Cls,!!idleTailPattern,stallLayer));
     const ar3=escAttr(flowLinkAria(3,a3Cls,!!idleTailPattern,stallLayer));
@@ -2811,8 +2811,10 @@ function renderComp(cid){
       const winM=fmtSpanSec(A.length*STALL_PERSIST.sampleS);
       const body='OUT_ACTIVE='+fmt(outLatest)+' with ACKED=0 across ~'+winM+'. '+
         (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
-        'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
-        '<b>ES-side checks:</b> /_cat/thread_pool/write, slow ES nodes, network latency, GC pauses on data nodes, etc.';
+        'The output worker is sending batches to the destination but receiving no acknowledgements.<br>'+
+        '<b>Destination checks (any output):</b> connectivity (DNS, TLS, certs), proxies/firewalls, credentials, and endpoint health.<br>'+
+        '<b>If Elasticsearch:</b> write thread pools, heap/GC, shard allocation, slow logs, and <code>/_cat/thread_pool/write</code>.<br>'+
+        '<b>If Logstash:</b> pipeline health and errors, persistent queue, worker/queue settings, and Logstash logs for blocked or failing outputs.';
       if(ephem)warnAlerts.push(['warn','Output worker deadlock (episodic signature)',body]);
       else critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',body]);
     }
@@ -2821,7 +2823,9 @@ function renderComp(cid){
       const winM=fmtSpanSec(A.length*STALL_PERSIST.sampleS);
       const body='PIPE_ACTIVE='+fmt(pipeLatest)+' (latest) with OUT_ACTIVE=0 and ACKED=0 across ~'+winM+'. '+
         (ephem?'Per-interval pipeline\u2192output stall signature was brief; re-capture if you need proof of a chronic drain issue. ':'')+
-        'Events are queued in the pipeline but the output worker is not taking them. Check output config, connectivity to ES/Logstash, and output worker health in beat logs.';
+        'Events are queued in the pipeline but the output worker is not taking them. Verify Beat output configuration, network path to the destination, and output worker health in Beat logs.<br>'+
+        '<b>If Logstash:</b> check pipeline stats/API, persistent queue, and Logstash error logs for filter/output stalls.<br>'+
+        '<b>If Elasticsearch (direct output):</b> verify cluster reachability and indexing backpressure.';
       if(ephem)warnAlerts.push(['warn','Pipeline\u2192output stall (episodic signature)',body]);
       else critAlerts.push(['error','Pipeline\u2192output stall \u2014 queue not reaching output',body]);
     }
@@ -2833,10 +2837,12 @@ function renderComp(cid){
     if(!latFlat){
       if(p999p>30000)
         critAlerts.push(['error','Write latency p999='+fmtDurationMs(p999p)+' \u2014 extreme tail',
-          'p999 exceeds 30\u00a0s (p99='+fmtDurationMs(p99p)+', spread='+fmtDurationMs(p999p-p99p)+'). A fraction of bulk requests are hanging for very long. '+
-          'Potential Causes: ES bulk thread pool exhaustion, network latency, slow ES, connection issues, slow ingest processing, ES indexing lag/hotspots, unavailable shards, etc.']);
+          'p999 exceeds 30\u00a0s (p99='+fmtDurationMs(p99p)+', spread='+fmtDurationMs(p999p-p99p)+'). A fraction of write/bulk requests are hanging for very long. '+
+          'Common causes: network latency or loss, TLS/proxy overhead, destination overload or backpressure. '+
+          '<b>If Elasticsearch:</b> bulk/write thread pools, ingest pipelines, indexing hotspots, shard unavailability. '+
+          '<b>If Logstash:</b> pipeline or filter/output plugin stalls, persistent queue, or downstream (e.g. Logstash elasticsearch output) pressure.']);
       else if(p99p>10000)
-        critAlerts.push(['error','Write latency p99='+fmtDurationMs(p99p),'Exceeds 10\u00a0s. p999='+fmtDurationMs(p999p)+'. ES pressure or slow network.']);
+        critAlerts.push(['error','Write latency p99='+fmtDurationMs(p99p),'Exceeds 10\u00a0s. p999='+fmtDurationMs(p999p)+'. Heavy destination load, slow network path, or TLS/proxy overhead.']);
       else if(p99p>3000)
         warnAlerts.push(['warn','Write latency p99='+fmtDurationMs(p99p)+' (elevated)','Above 3\u00a0s. p999='+fmtDurationMs(p999p)+'.']);
     }
@@ -2848,9 +2854,9 @@ function renderComp(cid){
       critAlerts.push(['error',
         'Transport errors: WRITE_ERR='+totWriteErr+', READ_ERR='+totReadErr,
         'These are connection/TLS-level failures distinct from event-level FAILED. '+
-        (totWriteErr>0 ? 'WRITE_ERR: TCP connection resets, TLS handshake failures, or network timeouts sending to ES/Logstash. ' : '')+
-        (totReadErr>0  ? 'READ_ERR: ES sent a response the beat could not parse (unexpected disconnect, malformed response). ' : '')+
-        'Check beat logs for "connection reset by peer", TLS certificate errors, or ES /var/log entries around these timestamps.']);
+        (totWriteErr>0 ? 'WRITE_ERR: TCP connection resets, TLS handshake failures, or timeouts while writing to the destination socket. ' : '')+
+        (totReadErr>0  ? 'READ_ERR: unexpected response while reading from the destination (disconnect, truncated payload, or parse error). ' : '')+
+        'Review Beat logs for transport errors (TLS, resets, timeouts). If Elasticsearch: data-node logs; if Logstash: Logstash logs and any proxy in between.']);
   }
 
   if(B.length){
@@ -2876,8 +2882,8 @@ function renderComp(cid){
   }
 
   if(E.length){
-    if(maxKey(E,'429_%')>1)warnAlerts.push(['warn','429 rate peaked at '+maxKey(E,'429_%').toFixed(2)+'%','ES rate-limiting. Reduce bulk_max_size or add output workers.']);
-    if(maxKey(E,'RETRY_%')>5)warnAlerts.push(['warn','Retry rate peaked at '+maxKey(E,'RETRY_%').toFixed(2)+'%','High retry rate. Check ES indexing performance.']);
+    if(maxKey(E,'429_%')>1)warnAlerts.push(['warn','429 rate peaked at '+maxKey(E,'429_%').toFixed(2)+'%','HTTP 429 (toomany) often means the destination is rate-limiting or overloaded. Reduce batch/bulk size or add capacity. If Elasticsearch: cluster ingest pressure; if Logstash: pipeline or elasticsearch-output limits and downstream pressure.']);
+    if(maxKey(E,'RETRY_%')>5)warnAlerts.push(['warn','Retry rate peaked at '+maxKey(E,'RETRY_%').toFixed(2)+'%','High pipeline retry rate from output-side failures. If Elasticsearch: indexing pressure; if Logstash: pipeline error logs, filter/output plugin failures, persistent queue, and downstream health.']);
   }
 
   if(C.length>20){
