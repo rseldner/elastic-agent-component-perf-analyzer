@@ -2812,7 +2812,7 @@ function renderComp(cid){
       const body='OUT_ACTIVE='+fmt(outLatest)+' with ACKED=0 across ~'+winM+'. '+
         (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
         'The output worker is dispatching bulk requests to ES but receiving no acknowledgements.<br>'+
-        '<b>ES-side checks:</b> /_cat/thread_pool/write, /_cat/pending_tasks, circuit breaker status, ILM rollover blocking, GC pauses on data nodes.';
+        '<b>ES-side checks:</b> /_cat/thread_pool/write, slow ES nodes, network latency, GC pauses on data nodes, etc.';
       if(ephem)warnAlerts.push(['warn','Output worker deadlock (episodic signature)',body]);
       else critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',body]);
     }
@@ -2834,7 +2834,7 @@ function renderComp(cid){
       if(p999p>30000)
         critAlerts.push(['error','Write latency p999='+fmtDurationMs(p999p)+' \u2014 extreme tail',
           'p999 exceeds 30\u00a0s (p99='+fmtDurationMs(p99p)+', spread='+fmtDurationMs(p999p-p99p)+'). A fraction of bulk requests are hanging for very long. '+
-          'Causes: ES bulk thread pool exhaustion, ILM rollover blocking, GC pauses. Check /_nodes/hot_threads.']);
+          'Potential Causes: ES bulk thread pool exhaustion, network latency, slow ES, connection issues, slow ingest processing, ES indexing lag/hotspots, unavailable shards, etc.']);
       else if(p99p>10000)
         critAlerts.push(['error','Write latency p99='+fmtDurationMs(p99p),'Exceeds 10\u00a0s. p999='+fmtDurationMs(p999p)+'. ES pressure or slow network.']);
       else if(p99p>3000)
