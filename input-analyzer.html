@@ -423,6 +423,7 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .cc.deadlock{border-color:rgba(255,71,87,.4);background:rgba(255,71,87,.03)}
 .cc-title{font-size:12px;font-weight:600;color:var(--mid);margin-bottom:2px}
 .cc-sub{font-size:10px;color:var(--dim);margin-bottom:13px;font-family:'IBM Plex Mono',monospace}
+.cc-sub .cc-ioerr-rollup{color:var(--mid)}
 .cc-head-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 16px;margin-bottom:2px}
 .cc-head-titles{flex:1;min-width:min(280px,100%)}
 .cc-head-row .cc-title{margin-bottom:2px}
@@ -752,7 +753,7 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="cc" id="cc-lat"><div class="cc-title">Write latency</div><div class="cc-sub">MEAN / P95 / P99 / P999 / MAX &mdash; lifetime reservoir (ms in data; axis &amp; tooltips auto-scale to s / min / h)</div><canvas id="ch-lat" height="175"></canvas></div>
       <div class="cc" id="cc-io"><div class="cc-title">Network I/O per interval</div><div class="cc-sub">WRITE_B / READ_B &mdash; 30&nbsp;s deltas (bytes in data; axis &amp; tooltips use KiB / MiB / GiB)</div><canvas id="ch-io" height="175"></canvas></div>
       <div class="cc" id="cc-err"><div class="cc-title">Error rates (%)</div><div class="cc-sub">429_% / DROP_% / DUPE_% / RETRY_% per interval</div><canvas id="ch-err" height="175"></canvas></div>
-      <div class="cc" id="cc-ioerr"><div class="cc-title">Transport errors per interval</div><div class="cc-sub">WRITE_ERR (TLS/network) &middot; READ_ERR (response parse) &mdash; distinct from event-level FAILED</div><canvas id="ch-ioerr" height="175"></canvas></div>
+      <div class="cc" id="cc-ioerr"><div class="cc-title">Transport errors per interval</div><div class="cc-sub">WRITE_ERR (network/TLS) &middot; READ_ERR (response parse) &mdash; distinct from event-level FAILED.<span class="cc-ioerr-rollup" id="cc-ioerr-rollup"></span></div><canvas id="ch-ioerr" height="175"></canvas></div>
     </div>
   </div>
 
@@ -1484,6 +1485,35 @@ async function copyIdentToClipboard(text,triggerEl){
 }
 function inpTdDur(ms,css){const n=Number(ms)||0;return'<td class="num" style="'+(css||'')+'" title="'+n+' ms (exact)">'+fmtDurationMs(n)+'</td>';}
 function sumKey(rows,k){return rows.reduce((s,r)=>s+(Number(r[k])||0),0);}
+/**
+ * WRITE_ERR/READ_ERR per row (same as chart) and window rollups. Alert subtitle uses these sums.
+ */
+function transportErrRollupFromA(A){
+  if(!A||!A.length) return {n:0,nWithErr:0,maxComb:0,totW:0,totR:0,hasErr:false};
+  let nWith=0, maxC=0, totW=0, totR=0;
+  for(let i=0;i<A.length;i++){
+    const w=Number(A[i].WRITE_ERR)||0, re=Number(A[i].READ_ERR)||0, c=w+re;
+    totW+=w; totR+=re;
+    if(c>0) nWith++;
+    if(c>maxC) maxC=c;
+  }
+  return {n:A.length,nWithErr:nWith,maxComb:maxC,totW,totR,hasErr:totW+totR>0};
+}
+function transportErrAlertContextHtml(u){
+  if(!u.n||!u.hasErr) return'';
+  const frac=u.nWithErr+'/'+u.n;
+  const maxL=u.maxComb>0?'\u00a0Per-interval max (WRITE+READ) in one 30\u00a0s bucket: '+u.maxComb+'.':'';
+  if(u.nWithErr===1)
+    return 'In this load: non-zero in '+frac+' (single 30\u00a0s interval).'+maxL+'\u00a0May be a brief glitch; use the chart for timing and check Beat logs.<br><br>';
+  return 'In this load: non-zero in '+frac+' interval(s).'+maxL+'\u00a0Recurring or widely spread errors point to a transport-path issue; compare with the chart and logs.<br><br>';
+}
+function transportErrSubtitleText(u){
+  if(!u.n) return'';
+  if(!u.hasErr) return' \u2014 0 in '+u.n+' 30\u00a0s interval(s)';
+  if(u.nWithErr===1)
+    return' \u2014 '+u.nWithErr+'/'+u.n+' with errors \u00b7 max/interval (W+R) '+u.maxComb+' \u00b7 WRITE '+u.totW+', READ '+u.totR+' (one bucket; see chart)';
+  return' \u2014 '+u.nWithErr+'/'+u.n+' with errors \u00b7 max/interval (W+R) '+u.maxComb+' \u00b7 WRITE '+u.totW+', READ '+u.totR;
+}
 function maxKey(rows,k){return rows.length?Math.max(...rows.map(r=>Number(r[k])||0)):0;}
 function minKey(rows,k){return rows.length?Math.min(...rows.map(r=>Number(r[k])||0)):0;}
 function avgKey(rows,k){return rows.length?rows.reduce((s,r)=>s+(Number(r[k])||0),0)/rows.length:0;}
@@ -2628,6 +2658,7 @@ function renderComp(cid){
 
   const A=byComp(DATA.A,cid),B=byComp(DATA.B,cid),C=byComp(DATA.C,cid);
   const D=DATA.D?byComp(DATA.D,cid):[],E=byComp(DATA.E,cid);
+  const tErrRollup=transportErrRollupFromA(A);
 
   const base=A.length?A:B.length?B:C.length?C:[];
   const tsFirst=base.length?base[0].TIMESTAMP:'--';
@@ -2813,7 +2844,7 @@ function renderComp(cid){
         (ephem?'Per-interval deadlock signature was brief or sparse; confirm with a longer capture if this is chronic. ':'')+
         'The output worker is sending batches to the destination but receiving no acknowledgements.<br>'+
         '<b>Destination checks (any output):</b> connectivity (DNS, TLS, certs), proxies/firewalls, credentials, and endpoint health.<br>'+
-        '<b>If Elasticsearch:</b> write thread pools, heap/GC, shard allocation, slow logs, and <code>/_cat/thread_pool/write</code>.<br>'+
+        '<b>If Elasticsearch:</b> write thread pools, heap/GC, unassigned shards, network latency, etc.<br>'+
         '<b>If Logstash:</b> pipeline health and errors, persistent queue, worker/queue settings, and Logstash logs for blocked or failing outputs.';
       if(ephem)warnAlerts.push(['warn','Output worker deadlock (episodic signature)',body]);
       else critAlerts.push(['error','Output worker deadlock \u2014 events sent but never acknowledged',body]);
@@ -2849,13 +2880,13 @@ function renderComp(cid){
     // Frozen latency: already shown via HISTORICAL badge on stat cards and frozen-data chart subtitle — suppress alert.
 
     // Transport errors — WRITE_ERR/READ_ERR nonzero is always actionable
-    const totWriteErr = sumKey(A,'WRITE_ERR'), totReadErr = sumKey(A,'READ_ERR');
-    if(totWriteErr > 0 || totReadErr > 0)
+    if(tErrRollup.totW > 0 || tErrRollup.totR > 0)
       critAlerts.push(['error',
-        'Transport errors: WRITE_ERR='+totWriteErr+', READ_ERR='+totReadErr,
-        'These are connection/TLS-level failures distinct from event-level FAILED. '+
-        (totWriteErr>0 ? 'WRITE_ERR: TCP connection resets, TLS handshake failures, or timeouts while writing to the destination socket. ' : '')+
-        (totReadErr>0  ? 'READ_ERR: unexpected response while reading from the destination (disconnect, truncated payload, or parse error). ' : '')+
+        'Transport errors: WRITE_ERR='+tErrRollup.totW+', READ_ERR='+tErrRollup.totR,
+        transportErrAlertContextHtml(tErrRollup)+
+        'These are connection/transport-level failures distinct from event-level FAILED. '+
+        (tErrRollup.totW>0 ? 'WRITE_ERR: TCP connection resets, TLS handshake failures, or timeouts while writing to the destination socket. ' : '')+
+        (tErrRollup.totR>0  ? 'READ_ERR: unexpected response while reading from the destination (disconnect, truncated payload, or parse error). ' : '')+
         'Review Beat logs for transport errors (TLS, resets, timeouts). If Elasticsearch: data-node logs; if Logstash: Logstash logs and any proxy in between.']);
   }
 
@@ -3053,6 +3084,9 @@ function renderComp(cid){
   if(A.length&&allZero(A,'WRITE_ERR')&&allZero(A,'READ_ERR'))markCard('cc-ioerr','ok');
   if(B.length&&allZero(B,'Q_FILLED'))markCard('cc-q','stalled');
   if(B.length&&allZero(B,'CLIENTS')&&allZero(B,'PIPE_ACTIVE'))markCard('cc-pipe','stalled');
+
+  const _ioR=document.getElementById('cc-ioerr-rollup');
+  if(_ioR) _ioR.textContent= A.length ? transportErrSubtitleText(tErrRollup) : '';
 
   // CHARTS
   const lineChartXOpts={xTimestamps:xTsA,xRangeTitle:xRangeDash,xAxisTickCount:18};
