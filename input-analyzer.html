@@ -517,7 +517,7 @@ table.itbl tr:hover td{background:var(--surf2)}
 }
 .inp-ov-line:hover{background:var(--surf2)}
 .inp-ov-line.sel{box-shadow:inset 3px 0 0 var(--accent)}
-.inp-ov-side{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:5px 7px;border-left:1px solid var(--bdr);background:var(--surf2);flex-shrink:0}
+.inp-ov-side{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;padding:5px 7px;border-left:1px solid var(--bdr);background:var(--surf2);flex-shrink:0}
 .inp-ov-comp{color:var(--info);max-width:42ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inp-ov-sep{color:var(--dim);flex-shrink:0}
 .inp-ov-inp{color:var(--text);flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -614,7 +614,7 @@ table.itbl tr:hover td{background:var(--surf2)}
           </button>
           <div id="inp-cap-body" class="inp-cap-body" hidden>
             <div class="inp-ov-wrap inp-ov-wrap--solo">
-              <p class="inp-overview-note">Status for <strong>dataset keys on the selected component</strong> only (Beats&rsquo; <code>monitoring.dataset</code> map, same rules as <strong>Table D</strong> below). This is <em>not</em> the &ldquo;ingestion / input buffer&rdquo; gauges in <strong>Event flow by layer</strong> (FB_ACTIVE). Click a row to scroll to Table D. Clipboard buttons copy the <strong>component ID</strong> (top) and <strong>dataset key</strong> (bottom).</p>
+              <p class="inp-overview-note">Status for <strong>dataset keys on the selected component</strong> only (Beats&rsquo; <code>monitoring.dataset</code> map, same rules as <strong>Table D</strong> below). This is <em>not</em> the &ldquo;ingestion / input buffer&rdquo; gauges in <strong>Event flow by layer</strong> (FB_ACTIVE). Click a row to scroll to Table D. The copy button copies the <strong>dataset key</strong> in full; copy the <strong>component ID</strong> from the title bar. Hover status pills and latency chips for definitions.</p>
               <div class="inp-ov-tiles" id="inp-ov-tiles"></div>
               <div class="inp-ov-groups" id="inp-ov-groups"></div>
             </div>
@@ -725,12 +725,12 @@ table.itbl tr:hover td{background:var(--surf2)}
               <th class="num" title="99th percentile of processing time in the reservoir (ms).">P99</th>
               <th class="num" title="Maximum observed processing time in the reservoir (ms).">Max</th>
               <th class="num" title="Standard deviation of processing times in the reservoir (ms).">StdDev</th>
-              <th>Status</th>
+              <th title="FROZEN+CRIT / FROZEN / CRITICAL / SLOW / OK: hover a status pill in this column for a full definition (same as Dataset keys panel tiles).">Status</th>
             </tr></thead>
             <tbody id="itbody"></tbody>
           </table>
         </div>
-        <div class="inp-status-legend"><strong>FROZEN</strong> &mdash; sample count is identical on every loaded interval (no new histogram observations in this capture). <strong>CRITICAL</strong> &mdash; P99 processing time &gt; 30&nbsp;s. <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
+        <div class="inp-status-legend"><strong>FROZEN+CRIT</strong> &mdash; sample count frozen on every interval and P99 &gt; 30&nbsp;s. <strong>FROZEN</strong> &mdash; sample count identical on every loaded interval. <strong>CRITICAL</strong> &mdash; P99 &gt; 30&nbsp;s (not frozen). <strong>SLOW</strong> &mdash; P99 &gt; 5&nbsp;s. Numeric latency cells use short units (ms, s, min, h); hover a cell to see the exact millisecond value.</div>
       </div>
       <div class="cgrid" style="margin-top:12px">
         <div class="cc full"><div class="cc-title">Processing time per dataset key &mdash; lifetime reservoir</div><div class="cc-sub">Bars use the same latest snapshot as the table. Y-axis and tooltips switch units (ms, s, min, h) by scale. &ldquo;Frozen&rdquo; sample count means no new observations in the loaded window. Long keys wrap to several lines; tooltip title shows the full id. <strong>Click a bar</strong> to copy that key in full.</div><div class="chart-fixed-h chart-ibar-h"><canvas id="ch-ibar" height="200"></canvas></div></div>
@@ -2189,6 +2189,17 @@ function computeInputProcStatus(rowsForOneInput){
   else{pillClass='ok';label='OK';}
   return{pillClass,label,frozen,p99,last};
 }
+/** Tooltips for dataset-key processing status pills (overview tiles, Table D). */
+function inputProcStatusPillTitle(lab){
+  const m={
+    'FROZEN+CRIT':'FROZEN+CRIT: histogram sample count is frozen (unchanged on every loaded interval) and the latest P99 processing time is over 30 s.',
+    'CRITICAL':'CRITICAL: latest P99 processing time is over 30 s; the histogram is still getting new samples (not frozen).',
+    'FROZEN':'FROZEN: sample count is identical on every loaded interval (no new processing-time observations in this capture for this key).',
+    'SLOW':'SLOW: latest P99 is over 5 s and at or below 30 s.',
+    'OK':'OK: P99 is at or below 5 s and the histogram is not frozen.'
+  };
+  return m[lab]||'';
+}
 /** Table cell highlight thresholds (P95 / P99 / Max). */
 function inputLatencyHighlights(lastRow){
   if(!lastRow)return[];
@@ -2196,9 +2207,9 @@ function inputLatencyHighlights(lastRow){
   const p99=Number(lastRow.P99_ms)||0;
   const max=Number(lastRow.MAX_ms)||0;
   const chips=[];
-  if(p95>10000)chips.push({cls:'hi-warn',text:'P95>10s'});
-  if(p99>10000)chips.push({cls:'hi-err',text:'P99>10s'});
-  if(max>30000)chips.push({cls:'hi-crit',text:'Max>30s'});
+  if(p95>10000)chips.push({cls:'hi-warn',text:'P95>10s',tip:'P95 in the latest snapshot: over 10 s (processing-time reservoir).'});
+  if(p99>10000)chips.push({cls:'hi-err',text:'P99>10s',tip:'P99 in the latest snapshot: over 10 s (processing-time reservoir).'});
+  if(max>30000)chips.push({cls:'hi-crit',text:'Max>30s',tip:'Max in the latest snapshot: over 30 s in the lifetime reservoir.'});
   return chips;
 }
 /** Preserve file order per (component, dataset key) series. */
@@ -2234,32 +2245,32 @@ function renderInputStatusOverview(allD,selectedCid){
   });
   const counts=Object.fromEntries(statusOrder.map(s=>[s,0]));
   items.forEach(it=>{counts[it.st.label]=(counts[it.st.label]||0)+1;});
+  const cidFallback=String(selectedCid||'').trim();
   tilesEl.innerHTML=statusOrder.map(lab=>{
     const n=counts[lab]||0;
-    return'<div class="inp-ov-tile"><span class="pill '+pillFor[lab]+'">'+lab+'</span><div class="inp-ov-n">'+n+'</div></div>';
+    const pTip=escAttr(inputProcStatusPillTitle(lab));
+    return'<div class="inp-ov-tile"><span class="pill '+pillFor[lab]+'" title="'+pTip+'">'+lab+'</span><div class="inp-ov-n">'+n+'</div></div>';
   }).join('');
-  const firstC=items.length?String(items[0].comp||'').trim():'';
   let html='';
   for(const lab of statusOrder){
     const list=items.filter(it=>it.st.label===lab);
     if(!list.length)continue;
     list.sort((a,b)=>String(a.inputId).localeCompare(String(b.inputId)));
+    const pTip=escAttr(inputProcStatusPillTitle(lab));
     html+='<div class="inp-ov-grp">';
-    html+='<div class="inp-ov-grp-hd"><span class="pill '+pillFor[lab]+'">'+lab+'</span><span class="inp-ov-grp-n">'+list.length+' key'+(list.length===1?'':'s')+'</span></div>';
+    html+='<div class="inp-ov-grp-hd"><span class="pill '+pillFor[lab]+'" title="'+pTip+'">'+lab+'</span><span class="inp-ov-grp-n">'+list.length+' key'+(list.length===1?'':'s')+'</span></div>';
     html+='<ul class="inp-ov-ul">';
     for(const it of list){
       const id=it.inputId;
       const sid=id.length>52?escHtml(id.slice(0,46)+'\u2026'):escHtml(id);
-      const compAttr=String(it.comp).trim()||selStr;
-      const chips=it.hi.map(h=>'<span class="inp-ov-chip '+h.cls+'">'+h.text+'</span>').join('');
+      const compAttr=String(it.comp).trim()||cidFallback;
+      const chips=it.hi.map(h=>'<span class="inp-ov-chip '+h.cls+'" title="'+escAttr(h.tip||'')+'">'+h.text+'</span>').join('');
       html+='<li class="inp-ov-row">'+
         '<button type="button" class="inp-ov-line" data-ov-cid="'+escAttr(compAttr)+'" title="Scroll to Table D (dataset key detail)">'+
         '<span class="inp-ov-inp">'+sid+'</span>'+
         (chips?'<span class="inp-ov-hi">'+chips+'</span>':'')+
         '</button>'+
-        '<div class="inp-ov-side">'+
-        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(it.comp||firstC)+'" title="Copy component ID" aria-label="Copy component ID">&#128203;</button>'+
-        '<button type="button" class="id-copy-btn" data-copy="'+escAttr(id)+'" title="Copy dataset key" aria-label="Copy dataset key">&#128203;</button>'+
+        '<div class="inp-ov-side">'+copyIdentBtnHtml(id,'dsk')+
         '</div></li>';
     }
     html+='</ul></div>';
@@ -3275,7 +3286,7 @@ function renderComp(cid){
         inpTdDur(r.MEAN_ms,'')+inpTdDur(r.MEDIAN_ms,'')+
         inpTdDur(r.P95_ms,p95s)+inpTdDur(r.P99_ms,p99s)+inpTdDur(r.MAX_ms,maxs)+
         inpTdDur(r.STDDEV_ms,'')+
-        '<td><span class="pill '+st.pillClass+'">'+st.label+'</span></td>';
+        '<td><span class="pill '+st.pillClass+'" title="'+escAttr(inputProcStatusPillTitle(st.label))+'">'+st.label+'</span></td>';
       tbody.appendChild(tr);
     });
   }else{
