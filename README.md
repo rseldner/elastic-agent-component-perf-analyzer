@@ -82,6 +82,6 @@ Those TSV outputs are metric-focused and typically include component IDs, timest
 
 ### Screenshot
 
-<img width="2184" height="9361" alt="image" src="https://github.com/user-attachments/assets/92a625fc-9ce7-46d1-8cbf-07d7d3735cb8" />
+<img width="3408" height="7403" alt="image" src="https://github.com/user-attachments/assets/dd0690da-7153-4786-a802-abdb626c2e38" />
 
  
