@@ -234,6 +234,55 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .flow-rollup-hint{display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06);color:var(--dim);font-size:8.5px;letter-spacing:0.01em;max-width:90ch}
 [data-theme="light"] .flow-rollup-hint{border-top-color:rgba(0,0,0,.06)}
 .flow-rollup-hint code{font-size:inherit;padding:0 1px}
+.flow-viz-wrap{margin:14px 0 0;border-top:1px solid var(--bdr2);padding-top:12px}
+.flow-viz-hd{margin-bottom:6px;align-items:center}
+.flow-viz-persist{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--dim);line-height:1.45;margin:0 0 8px;max-width:96ch
+}
+.flow-dominant-legend{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
+  font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--mid);margin:0 0 4px
+}
+.flow-dl-item{display:inline-flex;align-items:center;gap:4px}
+.flow-dl-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.flow-dominant-strip{
+  display:flex;height:20px;border-radius:4px;overflow:hidden;
+  width:100%;min-width:0;box-shadow:0 0 0 1px var(--bdr) inset
+}
+.flow-d-seg{flex:1;min-width:0}
+.flow-d-seg-na{background:var(--bdr2);min-width:0}
+[data-theme="light"] .flow-d-seg-na{background:var(--bdr2)}
+.chart-flow-spark-h{position:relative;height:min(160px,28vh);min-height:100px;max-height:200px;width:100%;margin:6px 0 0}
+#flow-viz-spark, #flow-viz-passport{display:none}
+#flow-viz-spark.fv-on, #flow-viz-passport.fv-on{display:block}
+.pp-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px 10px;margin:8px 0 0;
+  font-family:'IBM Plex Mono',monospace;min-width:0
+}
+@media (max-width: 720px){.pp-grid{grid-template-columns:repeat(2,1fr)}}
+.pp-ack{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--mid);
+  margin-top:10px;padding:8px 10px;border:1px solid var(--bdr2);border-radius:6px;background:var(--surf2)
+}
+.pp-ack b{color:var(--text);font-size:10px}
+.pp-col{display:flex;flex-direction:column;align-items:stretch;min-width:0}
+.pp-name{font-size:8px;letter-spacing:0.06em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;font-weight:600}
+.pp-rail{position:relative;height:108px;border-left:1px solid var(--bdr2);margin:0 6px;flex:1;min-width:0}
+.pp-band{
+  position:absolute;left:2px;right:2px;min-height:2px;
+  background:rgba(0,0,0,.1);border-radius:2px;
+  pointer-events:none
+}
+[data-theme="light"] .pp-band{background:rgba(0,0,0,.04)}
+.pp-dot{
+  position:absolute;left:50%;transform:translateX(-50%);width:9px;height:9px;
+  border-radius:50%;box-shadow:0 0 0 2px var(--surf);
+  z-index:2;pointer-events:none
+}
+.pp-nums{
+  font-size:8.5px;color:var(--dim);line-height:1.4;margin-top:4px;white-space:normal;word-break:break-all
+}
+.pp-nums b{color:var(--text);font-weight:500}
 .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:20px}
 .hc{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;text-align:center}
 .hc-icon{font-size:18px;margin-bottom:4px}
@@ -569,6 +618,25 @@ table.itbl tr:hover td{background:var(--surf2)}
       <div class="flow-rollup-hint" id="flow-rollup-hint" aria-hidden="true"></div>
     </div>
     <div class="flow-row" id="flow-row" role="group" aria-label="Rolled-up event flow: ingest, queue, out, acked"></div>
+    <div class="flow-viz-wrap" id="flow-viz-wrap" style="display:none" aria-label="Time-aligned backlog views">
+      <div class="flow-hd-row flow-viz-hd">
+        <div class="flow-title">By time in window</div>
+        <div class="flow-toolbar">
+          <span class="flow-mode-lbl" id="flow-viz-lbl">View</span>
+          <div class="flow-mode-seg" id="flow-viz-seg" role="tablist" aria-label="Event flow time view">
+            <button type="button" role="tab" data-flow-viz="spark" title="All four series on the same 30s index; colormap shows which count was largest in each row." aria-selected="true" onclick="setFlowViz('spark')">Sparks</button>
+            <button type="button" role="tab" data-flow-viz="passport" title="Min to max band per layer and dot = latest 30s sample. Acked line = total in window." aria-selected="false" onclick="setFlowViz('passport')">Passport</button>
+          </div>
+        </div>
+      </div>
+      <p class="flow-viz-persist" id="flow-viz-persist" aria-hidden="true"></p>
+      <div id="flow-viz-spark">
+        <div class="flow-dominant-legend" id="flow-dominant-legend" aria-hidden="true"></div>
+        <div class="flow-dominant-strip" id="flow-dominant-strip" style="display:none" role="img" aria-label=""></div>
+        <div class="chart-flow-spark-h"><canvas id="ch-flow-spark" height="120"></canvas></div>
+      </div>
+      <div id="flow-viz-passport"></div>
+    </div>
   </div>
   <div class="health-grid" id="health-grid"></div>
   <div id="alerts"></div>
@@ -1555,6 +1623,177 @@ function flowLinkAria(leg, cls, idleTailPattern){
   }
   return'';
 }
+const FLOW_VIZ_KEY='inputAnalyzer.flowViz';
+const FLOW_VIZES=['spark','passport'];
+const FLOW_LAY_C=['#00c875','#00d4ff','#ffb830','#ff2d55'];// Ingest, Pipe, Queue, Out
+const FLOW_LAY_N=['Ingest','Pipe','Queue','Out'];
+/**
+ * Aligns A and B to the same 30s rows by index (same as Event flow by layer), per component.
+ */
+function mergeLayerSeries(A,B){
+  if(!A.length&&!B.length)return{ts:[],fb:[],pipe:[],q:[],out:[]};
+  if(A.length&&!B.length){
+    return{
+      ts:A.map(r=>r.TIMESTAMP),
+      fb:A.map(r=>Number(r.FB_ACTIVE)||0),
+      pipe:new Array(A.length).fill(0),
+      q:new Array(A.length).fill(0),
+      out:A.map(r=>Number(r.OUT_ACTIVE)||0)
+    };
+  }
+  if(!A.length&&B.length){
+    return{
+      ts:B.map(r=>r.TIMESTAMP),
+      fb:new Array(B.length).fill(0),
+      pipe:B.map(r=>Number(r.PIPE_ACTIVE)||0),
+      q:B.map(r=>Number(r.Q_FILLED)||0),
+      out:new Array(B.length).fill(0)
+    };
+  }
+  const n=Math.min(A.length,B.length);
+  const ts=[],fb=[],pipe=[],q=[],out=[];
+  for(let i=0;i<n;i++){
+    ts.push(A[i]&&A[i].TIMESTAMP?A[i].TIMESTAMP:B[i].TIMESTAMP);
+    fb.push(A[i]?Number(A[i].FB_ACTIVE)||0:0);
+    out.push(A[i]?Number(A[i].OUT_ACTIVE)||0:0);
+    pipe.push(B[i]?Number(B[i].PIPE_ACTIVE)||0:0);
+    q.push(B[i]?Number(B[i].Q_FILLED)||0:0);
+  }
+  return{ts,fb,pipe,q,out};
+}
+function dominantIndex4(fb, pipe, q, out){
+  const vals=[fb, pipe, q, out];
+  let jm=0, m=-1;
+  for(let j=0;j<4;j++)if(vals[j]>m){m=vals[j];jm=j;}
+  return m>0?jm:-1;
+}
+function getFlowViz(){
+  try{
+    const v=localStorage.getItem(FLOW_VIZ_KEY);
+    if(FLOW_VIZES.includes(v))return v;
+  }catch(e){}
+  return'spark';
+}
+function syncFlowVizSeg(){
+  const m=getFlowViz();
+  document.querySelectorAll('#flow-viz-seg [data-flow-viz]').forEach(btn=>{
+    const on=btn.getAttribute('data-flow-viz')===m;
+    btn.setAttribute('aria-selected',on?'true':'false');
+  });
+}
+function setFlowViz(mode){
+  if(!FLOW_VIZES.includes(mode))return;
+  try{localStorage.setItem(FLOW_VIZ_KEY,mode);}catch(e){}
+  syncFlowVizSeg();
+  const sel=document.getElementById('comp-sel');
+  if(!sel||!sel.value)return;
+  const cid=sel.value;
+  const A=byComp(DATA.A||[],cid),B=byComp(DATA.B||[],cid);
+  if(!A.length&&!B.length)return;
+  const totAck=A.length?sumKey(A,'ACKED'):0;
+  const t0=(A[0]&&A[0].TIMESTAMP)||(B[0]&&B[0].TIMESTAMP);
+  const t1=(A.length&&A[A.length-1].TIMESTAMP)||(B.length&&B[B.length-1].TIMESTAMP);
+  updateFlowVizPanels(A,B,totAck,xAxisRangeTitle(t0,t1));
+}
+function _buildPassportHtmlFromMerge(m, totAck){
+  const c=FLOW_LAY_C, names=FLOW_LAY_N;
+  const segs = [
+    _ppCol(names[0],m.fb,c[0]),
+    _ppCol(names[1],m.pipe,c[1]),
+    _ppCol(names[2],m.q,c[2]),
+    _ppCol(names[3],m.out,c[3])
+  ];
+  return'<div class="pp-grid" role="group" aria-label="Per-layer min max and latest 30s value">'+segs.join('')+
+    '</div><div class="pp-ack"><b>Acked</b> in this load window: '+escHtml(fmt(totAck,0))+' (sum of counter deltas; not a min&ndash;max band).</div>';
+}
+function _ppCol(name, arr, col){
+  if(!arr||!arr.length)return'<div class="pp-col"><div class="pp-name" style="color:'+escAttr(col)+'">'+escHtml(name)+'</div><p class="pp-nums" style="margin:0;opacity:0.75">no data</p></div>';
+  const a=arr.map(x=>Number(x)||0);
+  const gMin=Math.min(...a),gMax=Math.max(...a),gLast=a[a.length-1],span=Math.max(1e-9,gMax-gMin);
+  const b0=100*((gMin-gMin)/span),b1=100*((gMax-gMin)/span),bl=100*((gLast-gMin)/span);
+  const dStyle='left:50%;transform:translateX(-50%)';
+  const rail = gMax>gMin
+    ?'<div class="pp-rail" aria-hidden="true"><div class="pp-band" style="background:'+escAttr(col)+';opacity:0.15;bottom:'+b0+'%;height:'+Math.max(0,b1-b0)+'%"></div><div class="pp-dot" style="background:'+escAttr(col)+';'+dStyle+';bottom:calc('+bl+'% - 4.5px)"></div></div>'
+    :(gMax===0&&gMin===0?'<div class="pp-rail" aria-hidden="true"><div class="pp-dot" style="background:'+escAttr(col)+';'+dStyle+';opacity:0.45;bottom:4px"></div></div>':'<div class="pp-rail" aria-hidden="true"><div class="pp-band" style="background:'+escAttr(col)+';opacity:0.12;bottom:0%;height:100%"></div><div class="pp-dot" style="background:'+escAttr(col)+';'+dStyle+';bottom:50%"></div></div>');
+  const tBar='min '+fmt(gMin,0)+' to max '+fmt(gMax,0)+'; end (latest row) '+fmt(gLast,0);
+  return'<div class="pp-col" title="'+escAttr(tBar)+'"><div class="pp-name" style="color:'+escAttr(col)+'">'+escHtml(name)+'</div>'+rail+
+    '<p class="pp-nums">min <b>'+escHtml(fmt(gMin,0))+'</b> &middot; max <b>'+escHtml(fmt(gMax,0))+'</b> &middot; end <b style="color:'+escAttr(col)+'">'+escHtml(fmt(gLast,0))+'</b></p></div>';
+}
+function _domStripAria(m, wins){
+  if(!m.ts.length)return'';
+  return wins+' sample: each segment is a ~30s row. Color = which in-flight count (ingest, pipe, queue, out) was largest at that time.';
+}
+function _buildDominantStrip(m){
+  const out=document.getElementById('flow-dominant-strip');
+  if(!out)return;
+  if(!m.ts.length){out.style.display='none';out.setAttribute('aria-label','No aligned rows');out.innerHTML='';return;}
+  out.style.display='flex';
+  const h=[];
+  for(let i=0;i<m.ts.length;i++){
+    const di=dominantIndex4(m.fb[i]||0,m.pipe[i]||0,m.q[i]||0,m.out[i]||0);
+    const c=di<0?null:FLOW_LAY_C[di];
+    const t=di<0?String(m.ts[i]||'').slice(11,19)+'  all zero':(String(m.ts[i]||'').slice(11,19)+'  '+['Ingest','Pipe','Queue','Out'][di]+' largest');
+    const na=di<0;
+    h.push('<div class="flow-d-seg'+(na?' flow-d-seg-na':'')+'" '+(na?'':('style="background:'+escAttr(c)+'"'))+' title="'+escAttr(t)+'"></div>');
+  }
+  out.innerHTML=h.join('');
+  out.setAttribute('aria-label',_domStripAria(m,String(m.ts.length)));
+}
+function _flowVizLegHtml(){
+  const c=FLOW_LAY_C, n=FLOW_LAY_N;
+  return n.map((lab,i)=>'<span class="flow-dl-item"><span class="flow-dl-sq" style="background:'+c[i]+'"></span> '+escHtml(lab)+'</span>').join(' ');
+}
+function updateFlowVizPanels(A, B, totAck, xRangeDashForTip){
+  const w=document.getElementById('flow-viz-wrap');
+  const sSpark=document.getElementById('flow-viz-spark');
+  const sPass=document.getElementById('flow-viz-passport');
+  const sLegend=document.getElementById('flow-dominant-legend');
+  const sPersist=document.getElementById('flow-viz-persist');
+  if(!w||!sSpark||!sPass) return;
+  if(!A.length && !B.length){
+    w.style.display='none';
+    if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
+    sPass.innerHTML='';
+    sSpark.classList.remove('fv-on');
+    sPass.classList.remove('fv-on');
+    return;
+  }
+  w.style.display='block';
+  syncFlowVizSeg();
+  const m=mergeLayerSeries(A,B);
+  sPass.innerHTML=_buildPassportHtmlFromMerge(m, totAck);
+  _buildDominantStrip(m);
+  if(sLegend){
+    sLegend.style.display='flex';
+    sLegend.setAttribute('aria-hidden','false');
+    sLegend.innerHTML=_flowVizLegHtml();
+  }
+  const v=getFlowViz();
+  if(sPersist){
+    sPersist.style.display='block';
+    sPersist.setAttribute('aria-hidden','false');
+    sPersist.innerHTML= v==='spark'
+    ?'Multiband: four <strong>filled</strong> lines on the same 30&thinsp;s index. The strip above uses one color per interval: which layer&rsquo;s in-flight <em>event count</em> was largest (ties: ingest &rarr; pipe &rarr; queue &rarr; out; gray = all zero).'
+    :'Passport: each column &mdash; the band is min&ndash;max over the load window; the dot is the <strong>latest</strong> 30&thinsp;s row. <strong>Acked</strong> = sum of counter deltas in the full window, not a layer range.'+(xRangeDashForTip?' <span class="fvs" style="opacity:0.85">'+escHtml(String(xRangeDashForTip))+'</span>':'');
+  }
+  sSpark.classList.toggle('fv-on', v==='spark');
+  sPass.classList.toggle('fv-on', v==='passport');
+  if(v==='passport'){
+    if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
+    return;
+  }
+  if(!m.ts.length) return;
+  if(CHARTS['ch-flow-spark']){ try{CHARTS['ch-flow-spark'].destroy();}catch(e){} delete CHARTS['ch-flow-spark'];}
+  const layerLab=chartPlaceholderLabels(m.ts.length);
+  const layerRange=xAxisRangeTitle(m.ts[0],m.ts[m.ts.length-1]);
+  const lineChartXOpts={xTimestamps:m.ts,xRangeTitle:layerRange,xAxisTickCount:20};
+  const dss=[];
+  if(m.fb.length)dss.push({label:'Ingest (FB_ACTIVE)', data:m.fb, borderColor:FLOW_LAY_C[0], backgroundColor:'rgba(0,200,117,.08)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.pipe.length)dss.push({label:'Pipe (PIPE_ACTIVE)', data:m.pipe, borderColor:FLOW_LAY_C[1], backgroundColor:'rgba(0,212,255,.06)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.q.length)dss.push({label:'Queue (Q_FILLED)', data:m.q, borderColor:FLOW_LAY_C[2], backgroundColor:'rgba(255,184,48,.07)', fill: true, borderWidth: 1, pointRadius:0});
+  if(m.out.length)dss.push({label:'Out (OUT_ACTIVE)', data:m.out, borderColor:FLOW_LAY_C[3], backgroundColor:'rgba(255,45,85,.08)', fill: true, borderWidth: 1, pointRadius:0});
+  mkLine('ch-flow-spark', layerLab, dss, null, { maintainAspectRatio: false, yFormat: 'compactNum', xAxisTickCount: 20, ...lineChartXOpts });
+}
 function byComp(rows,cid){if(!rows||!cid)return[];const c=String(cid).trim();return rows.filter(r=>String(r.COMPONENT_ID||'').trim()===c);}
 /** Latest-interval dataset key processing status; same rules as the per-component table. */
 function computeInputProcStatus(rowsForOneInput){
@@ -2008,6 +2247,21 @@ function resetAll(){
   if(flR)flR.style.display='none';
   const fRh=document.getElementById('flow-rollup-hint');
   if(fRh){fRh.style.display='none';fRh.innerHTML='';fRh.setAttribute('aria-hidden','true');}
+  const fvw=document.getElementById('flow-viz-wrap');
+  if(fvw){fvw.style.display='none';}
+  const fvp=document.getElementById('flow-viz-passport');
+  if(fvp){fvp.innerHTML='';}
+  const fvs=document.getElementById('flow-viz-spark');
+  if(fvs){
+    fvs.classList.remove('fv-on');
+    const fdl=document.getElementById('flow-dominant-legend');
+    if(fdl){fdl.innerHTML='';fdl.setAttribute('aria-hidden','true');}
+    const fds=document.getElementById('flow-dominant-strip');
+    if(fds){fds.style.display='none';fds.innerHTML='';}
+    const fvpst=document.getElementById('flow-viz-persist');
+    if(fvpst){fvpst.innerHTML='';fvpst.setAttribute('aria-hidden','true');}
+  }
+  if(fvp)fvp.classList.remove('fv-on');
   setHdrStatus('no data loaded');
   syncComponentIdCopyUi('');
   document.getElementById('go-btn').disabled=true;
@@ -2209,6 +2463,7 @@ function renderComp(cid){
     const frx=document.getElementById('flow-rollup-hint');
     if(frx){frx.style.display='none';frx.innerHTML='';frx.setAttribute('aria-hidden','true');}
   }
+  updateFlowVizPanels(A,B,totAck,xRangeDash);
 
   // HEALTH GRID
   if(A.length)mkHealth(totAck>0?'&#9989;':idleTailPattern?'&#9201;':'&#10060;','Throughput',totAck>0?'ok':idleTailPattern?'warn':'crit');
