@@ -73,7 +73,18 @@ header{border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-i
 .logo-text{display:flex;flex-direction:column}
 #pg-upload{max-width:700px;margin:60px auto;padding:0 28px}
 .upload-h{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;margin-bottom:8px}
-.upload-sub{color:var(--mid);font-size:13px;line-height:1.9;margin-bottom:36px}
+.upload-sub{color:var(--mid);font-size:13px;line-height:1.9;margin-bottom:20px}
+.offline-note{
+  margin:0 0 20px;
+  padding:10px 12px;
+  border:1px solid var(--bdr2);
+  border-radius:8px;
+  background:var(--surf2);
+  color:var(--mid);
+  font-size:12px;
+  line-height:1.7;
+}
+.offline-note strong{color:var(--text)}
 .dropzone{border:2px dashed var(--bdr2);border-radius:10px;padding:44px 28px;text-align:center;cursor:pointer;transition:.15s;background:var(--surf);margin-bottom:16px;user-select:none}
 .dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--surf2)}
 .dz-icon{font-size:38px;margin-bottom:12px}
@@ -582,6 +593,7 @@ table.itbl tr:hover td{background:var(--surf2)}
     Drop either the <code>perf-analysis-*</code> folder from <code>elastic-agent-perf.sh</code> or raw <code>elastic-agent-*.ndjson</code> logs.<br>
     The dashboard auto-detects format and opens the same views.
   </p>
+  <div class="offline-note"><strong>Offline and private:</strong> your files stay on your computer. This tool runs entirely in your browser and does not upload diagnostic files anywhere.</div>
   <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
     <div class="dz-icon">&#128194;</div>
     <div class="dz-title">Drop TSV or NDJSON files/folders here</div>
